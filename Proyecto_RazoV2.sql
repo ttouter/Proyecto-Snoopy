@@ -101,8 +101,12 @@ CREATE FUNCTION VerificarEquipoRepetido(p_nombre_equipo VARCHAR(150), p_id_event
 RETURNS BOOLEAN DETERMINISTIC READS SQL DATA
 BEGIN
     DECLARE existe BOOLEAN DEFAULT FALSE;
+    -- Valida nombre repetido dentro del MISMO evento y la MISMA categoría
     SELECT COUNT(*) > 0 INTO existe FROM equipos 
-    WHERE nombre_equipo = p_nombre_equipo AND id_evento = p_id_evento AND id_categoria = p_id_categoria AND activo = TRUE;
+    WHERE nombre_equipo = p_nombre_equipo 
+      AND id_evento = p_id_evento 
+      AND id_categoria = p_id_categoria 
+      AND activo = TRUE;
     RETURN existe;
 END//
 
