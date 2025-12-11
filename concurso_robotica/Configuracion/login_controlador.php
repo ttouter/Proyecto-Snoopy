@@ -3,7 +3,7 @@ session_start();
 header('Content-Type: application/json');
 
 // Ajuste de ruta: Al estar en la misma carpeta, basta con el nombre del archivo
-require_once __DIR__ . '/../config/conexion.php';
+require_once '../Configuracion/conexion.php';
 
 $response = [
     "success" => false, 

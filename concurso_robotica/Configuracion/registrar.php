@@ -4,7 +4,7 @@ header('Content-Type: application/json');
 
 // Incluir la conexión a la base de datos
 // Asumimos que este archivo está en la misma carpeta que conexion.php
-require_once __DIR__ . '/../config/conexion.php';
+require_once '../Configuracion/conexion.php';
 
 $response = [
     "success" => false, 
