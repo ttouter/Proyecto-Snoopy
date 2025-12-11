@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="../Diseño/style.css">
 
     <script>
-        // Script de autocorrección de ruta también aquí
+        // Script de autocorrección de ruta
         (function() {
             if (window.location.href.includes('/Vista/')) {
                 window.location.href = window.location.href.replace('/Vista/', '/Vistas/');
@@ -48,7 +48,7 @@
                 <p class="text-gray-500 text-sm mt-1">Complete todos los campos para registrar su participación</p>
             </div>
 
-            <!-- Alerta -->
+            <!-- Alerta (Mensaje de Usuario Registrado aparecerá aquí) -->
             <div id="alertBox" class="hidden px-4 py-3 rounded-lg text-sm font-semibold flex items-center gap-2">
                 <i id="alertIcon" class="fa-solid"></i>
                 <span id="alertMessage">Mensaje</span>
@@ -212,6 +212,7 @@
             const icon = document.getElementById('alertIcon');
             const txt = document.getElementById('alertMessage');
             
+            // Limpiar estilos previos
             box.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-green-50', 'text-green-600', 'border-green-200');
             
             if (tipo === 'error') {
@@ -224,6 +225,10 @@
 
             txt.innerText = msg;
             box.classList.add('animate-pulse');
+
+            // --- CORRECCIÓN: HACER SCROLL HACIA LA ALERTA ---
+            // Esto asegura que el usuario vea el mensaje si está al final del formulario
+            box.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         // --- MANEJO DEL REGISTRO CON PHP ---
@@ -267,7 +272,7 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    mostrarAlerta(result.message, 'success');
+                    mostrarAlerta('¡Usuario registrado exitosamente!', 'success');
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 2000);
