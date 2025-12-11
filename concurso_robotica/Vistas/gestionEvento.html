@@ -8,11 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #2d3748; }
         .gradient-header { background: linear-gradient(to right, #52C5CB, #5852CB); }
@@ -31,7 +26,6 @@
     <!-- Header con botón VOLVER -->
     <header class="gradient-header text-white shadow-md p-4 flex justify-between items-center">
         <div class="flex items-center gap-3">
-            <!-- AQUÍ ESTÁ LA CONEXIÓN DE VUELTA -->
             <a href="adminPanel.html" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition text-white">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
@@ -83,6 +77,7 @@
                 <table class="w-full text-sm text-left">
                     <thead class="text-xs text-gray-500 uppercase bg-gray-100">
                         <tr>
+                            <th class="px-6 py-3">ID</th>
                             <th class="px-6 py-3">Nombre</th>
                             <th class="px-6 py-3">Fecha</th>
                             <th class="px-6 py-3">Lugar</th>
@@ -92,7 +87,7 @@
                     </thead>
                     <tbody id="tablaEventos" class="divide-y divide-gray-200">
                         <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-gray-400 italic">
+                            <td colspan="6" class="px-6 py-8 text-center text-gray-400 italic">
                                 <div class="flex justify-center mb-2"><div class="loader"></div></div>
                                 Cargando eventos...
                             </td>
@@ -108,83 +103,127 @@
         <div class="text-sm font-medium" id="toastMessage"></div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        const API_URL = '../Configuracion/gestionar_eventos.php';
 
-        const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = 'default-app-id';
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) cargarEventos();
-            else signInAnonymously(auth);
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarEventos();
         });
 
-        function cargarEventos() {
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'events'));
-            onSnapshot(q, (snapshot) => {
-                const tbody = document.getElementById('tablaEventos');
-                tbody.innerHTML = '';
-                const eventos = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if(data.activo !== false) eventos.push({id: doc.id, ...data});
-                });
-                eventos.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
-                document.getElementById('contador').innerText = eventos.length;
-
-                if(eventos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">No hay eventos activos.</td></tr>';
-                    return;
+        // --- 1. LISTAR EVENTOS ---
+        async function cargarEventos() {
+            try {
+                const response = await fetch(API_URL);
+                const text = await response.text();
+                
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    // Si falla el JSON, lanzamos el error con el texto recibido para verlo en pantalla
+                    throw new Error("Respuesta del servidor no válida: " + text.substring(0, 150));
                 }
 
-                eventos.forEach(evt => {
-                    const fechaObj = new Date(evt.fecha);
-                    const fechaStr = fechaObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-gray-50 transition-colors";
-                    tr.innerHTML = `
-                        <td class="px-6 py-4 font-bold text-gray-800">${evt.nombre}</td>
-                        <td class="px-6 py-4 text-gray-600">${fechaStr}</td>
-                        <td class="px-6 py-4 text-gray-600"><i class="fa-solid fa-location-dot mr-1 text-[#52C5CB]"></i> ${evt.lugar}</td>
-                        <td class="px-6 py-4 text-center"><span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">ACTIVO</span></td>
-                        <td class="px-6 py-4 text-center">
-                            <button onclick="window.eliminarEvento('${evt.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition"><i class="fa-solid fa-trash-can"></i></button>
+                const tbody = document.getElementById('tablaEventos');
+                tbody.innerHTML = '';
+
+                if (result.success && result.data && result.data.length > 0) {
+                    document.getElementById('contador').innerText = result.data.length;
+
+                    result.data.forEach(evt => {
+                        const fechaStr = new Date(evt.fecha_evento).toISOString().split('T')[0];
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-gray-50 transition-colors";
+                        tr.innerHTML = `
+                            <td class="px-6 py-4 text-gray-500 text-xs font-mono">#${evt.id_evento}</td>
+                            <td class="px-6 py-4 font-bold text-gray-800">${evt.nombre_evento}</td>
+                            <td class="px-6 py-4 text-gray-600">${fechaStr}</td>
+                            <td class="px-6 py-4 text-gray-600"><i class="fa-solid fa-location-dot mr-1 text-[#52C5CB]"></i> ${evt.lugar}</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">ACTIVO</span></td>
+                            <td class="px-6 py-4 text-center">
+                                <button onclick="eliminarEvento('${evt.id_evento}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    document.getElementById('contador').innerText = "0";
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">No hay eventos activos.<br><small class="text-red-400">' + (result.message || "") + '</small></td></tr>';
+                }
+            } catch (error) {
+                console.error("Error Fetch:", error);
+                document.getElementById('tablaEventos').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-red-600 bg-red-50 rounded-lg border border-red-200">
+                            <i class="fa-solid fa-bug text-2xl mb-2"></i><br>
+                            <strong>Error del Sistema:</strong><br>
+                            <span class="text-xs font-mono break-all">${error.message}</span>
                         </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            });
+                    </tr>`;
+            }
         }
 
-        window.crearEvento = async (e) => {
+        // --- 2. CREAR EVENTO ---
+        async function crearEvento(e) {
             e.preventDefault();
             const btn = document.getElementById('btnGuardar');
+            const originalText = btn.innerHTML;
             btn.disabled = true;
-            try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'events'), {
-                    nombre: document.getElementById('nombre').value.trim(),
-                    fecha: document.getElementById('fecha').value,
-                    lugar: document.getElementById('lugar').value.trim(),
-                    activo: true, createdAt: new Date().toISOString()
-                });
-                mostrarToast("Evento creado exitosamente", "success");
-                e.target.reset();
-            } catch (error) { mostrarToast("Error al guardar", "error"); }
-            finally { btn.disabled = false; }
-        };
+            btn.innerHTML = '<div class="loader mx-auto"></div>';
 
-        window.eliminarEvento = async (id) => {
-            if(!confirm("¿Eliminar este evento?")) return;
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', id), { activo: false });
-                mostrarToast("Evento eliminado", "success");
-            } catch (error) { mostrarToast("Error al eliminar", "error"); }
-        };
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        accion: 'crear',
+                        nombre: document.getElementById('nombre').value.trim(),
+                        fecha: document.getElementById('fecha').value,
+                        lugar: document.getElementById('lugar').value.trim()
+                    })
+                });
+                
+                const text = await response.text();
+                let result;
+                try { result = JSON.parse(text); } catch(e) { throw new Error(text); }
+
+                if (result.success) {
+                    mostrarToast(result.message, "success");
+                    e.target.reset();
+                    cargarEventos();
+                } else {
+                    mostrarToast(result.message, "error");
+                }
+            } catch (error) {
+                mostrarToast("Error: " + error.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // --- 3. ELIMINAR EVENTO ---
+        async function eliminarEvento(id) {
+            if(!confirm("¿Eliminar evento?")) return;
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accion: 'eliminar', id: id })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    mostrarToast(result.message, "success");
+                    cargarEventos();
+                } else {
+                    mostrarToast(result.message, "error");
+                }
+            } catch (error) {
+                mostrarToast("Error de red", "error");
+            }
+        }
 
         function mostrarToast(msg, type) {
             const toast = document.getElementById('toast');
