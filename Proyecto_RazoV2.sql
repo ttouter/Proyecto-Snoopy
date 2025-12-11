@@ -232,10 +232,16 @@ END //
 
 -- --- GESTIÓN DE EVENTOS Y JUECES (ADMIN) ---
 
+-- *** SP MODIFICADO: VALIDACIÓN DE FECHA ***
 CREATE PROCEDURE CrearEvento(IN p_nombre VARCHAR(200), IN p_fecha DATE, IN p_lugar VARCHAR(200), OUT p_resultado VARCHAR(255))
 BEGIN
-    INSERT INTO eventos (nombre_evento, fecha_evento, lugar, activo) VALUES (p_nombre, p_fecha, p_lugar, TRUE);
-    SET p_resultado = 'ÉXITO: Evento creado';
+    -- Validar que la fecha no sea anterior a la actual
+    IF p_fecha < CURDATE() THEN
+        SET p_resultado = 'ERROR: La fecha del evento no puede ser anterior a la actual';
+    ELSE
+        INSERT INTO eventos (nombre_evento, fecha_evento, lugar, activo) VALUES (p_nombre, p_fecha, p_lugar, TRUE);
+        SET p_resultado = 'ÉXITO: Evento creado';
+    END IF;
 END //
 
 CREATE PROCEDURE EliminarEvento(IN p_id_evento INT, OUT p_resultado VARCHAR(255))
