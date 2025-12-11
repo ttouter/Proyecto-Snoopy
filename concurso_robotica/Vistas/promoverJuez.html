@@ -43,14 +43,14 @@
     </header>
 
     <!-- Contenido -->
-    <main class="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full space-y-6">
+    <main class="flex-1 overflow-y-auto p-6 max-w-6xl mx-auto w-full space-y-6">
         <!-- Aviso Informativo -->
         <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg shadow-sm flex gap-4 items-start">
             <div class="text-blue-500 text-xl mt-1"><i class="fa-solid fa-circle-info"></i></div>
             <div>
-                <h3 class="font-bold text-blue-800 text-sm">Gestión de Roles</h3>
+                <h3 class="font-bold text-blue-800 text-sm">Gestión de Roles y Conflictos</h3>
                 <p class="text-sm text-blue-700 mt-1">
-                    Gestione los permisos de los usuarios. Puede asignar roles de <strong>Entrenador</strong>, <strong>Juez</strong> o <strong>Ambos</strong> según sea necesario.
+                    Gestione los permisos. <strong>Nota:</strong> El sistema validará conflictos de interés (un usuario con rol "Ambos" no debería ser Juez en una categoría donde tiene equipos).
                 </p>
             </div>
         </div>
@@ -58,7 +58,7 @@
         <!-- Tabla -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="p-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="font-bold text-gray-700">Usuarios Registrados (Coaches)</h3>
+                <h3 class="font-bold text-gray-700">Usuarios Registrados</h3>
                 <div class="relative">
                     <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
                     <input type="text" id="buscador" onkeyup="filtrarTabla()" placeholder="Buscar por nombre..." class="pl-8 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#5852CB] outline-none w-64">
@@ -69,10 +69,11 @@
                 <table class="w-full text-sm text-left">
                     <thead class="text-xs text-gray-500 uppercase bg-gray-100">
                         <tr>
-                            <th class="px-6 py-3">Nombre Completo</th>
-                            <th class="px-6 py-3">Correo Electrónico</th>
-                            <th class="px-6 py-3">Institución</th>
+                            <th class="px-6 py-3">Usuario</th>
                             <th class="px-6 py-3 text-center">Rol Actual</th>
+                            <!-- NUEVAS COLUMNAS -->
+                            <th class="px-6 py-3">Categorías (Juez)</th>
+                            <th class="px-6 py-3">Categorías (Equipos)</th>
                             <th class="px-6 py-3 text-center">Acción</th>
                         </tr>
                     </thead>
@@ -118,6 +119,7 @@
                         <option value="JUEZ">⚖️ Juez (Solo Evaluar)</option>
                         <option value="COACH_JUEZ">🌟 Ambos (Entrenador y Juez)</option>
                     </select>
+                    <p class="text-xs text-gray-400 mt-1">Nota: Si asigna "Ambos", verifique que no participe y juzgue en la misma categoría.</p>
                 </div>
             </div>
 
@@ -164,32 +166,57 @@
                         if(c.tipo_usuario === 'JUEZ') badgeColor = "bg-purple-100 text-purple-700 border-purple-200";
                         if(c.tipo_usuario === 'COACH_JUEZ') badgeColor = "bg-green-100 text-green-700 border-green-200";
 
+                        // --- VALIDACIÓN DE CONFLICTOS ---
+                        const catsJuezStr = c.categorias_juez || '';
+                        const catsEquiposStr = c.categorias_equipos || '';
+                        const catsJuez = catsJuezStr.split(', ').filter(Boolean);
+                        const catsEquipos = catsEquiposStr.split(', ').filter(Boolean);
+
+                        // Encontrar intersección (categorías repetidas)
+                        const conflictos = catsJuez.filter(cat => catsEquipos.includes(cat));
+                        const tieneConflicto = conflictos.length > 0;
+
+                        // Renderizado de las columnas de categorías con alerta
+                        const htmlJuez = tieneConflicto 
+                            ? `<span class="text-red-600 font-bold flex items-center gap-1" title="Conflicto: ${conflictos.join(', ')}"><i class="fa-solid fa-triangle-exclamation"></i> ${catsJuezStr}</span>`
+                            : (catsJuezStr || '<span class="text-gray-300 italic">Ninguna</span>');
+
+                        const htmlEquipos = tieneConflicto
+                            ? `<span class="text-red-600 font-bold flex items-center gap-1"><i class="fa-solid fa-circle-exclamation"></i> ${catsEquiposStr}</span>`
+                            : (catsEquiposStr || '<span class="text-gray-300 italic">Ninguna</span>');
+
+
                         const tr = document.createElement('tr');
-                        tr.className = "hover:bg-gray-50 transition-colors fila-coach";
+                        tr.className = `hover:bg-gray-50 transition-colors fila-coach ${tieneConflicto ? 'bg-red-50' : ''}`;
                         tr.innerHTML = `
                             <td class="px-6 py-4 font-bold text-gray-800 nombre-coach">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm uppercase">
                                         ${c.nombres.charAt(0)}${c.apellidos.charAt(0)}
                                     </div>
-                                    ${c.nombres} ${c.apellidos}
+                                    <div>
+                                        <div class="text-sm">${c.nombres} ${c.apellidos}</div>
+                                        <div class="text-xs text-gray-400 font-normal">${c.email}</div>
+                                        <div class="text-[10px] text-gray-400 font-normal mt-0.5"><i class="fa-solid fa-school"></i> ${c.escuela_proc}</div>
+                                    </div>
                                 </div>
-                            </td>
-                            <td class="px-6 py-4 text-gray-600 text-xs">${c.email}</td>
-                            <td class="px-6 py-4 text-gray-600">
-                                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs border border-gray-200">
-                                    <i class="fa-solid fa-school mr-1"></i> ${c.escuela_proc || 'Sin escuela'}
-                                </span>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span class="${badgeColor} px-2 py-1 rounded-full text-[10px] font-bold border uppercase">
                                     ${c.tipo_usuario.replace('_', ' ')}
                                 </span>
                             </td>
+                            <!-- NUEVAS COLUMNAS CON VALIDACIÓN -->
+                            <td class="px-6 py-4 text-xs text-gray-600">
+                                ${htmlJuez}
+                            </td>
+                            <td class="px-6 py-4 text-xs text-gray-600">
+                                ${htmlEquipos}
+                            </td>
                             <td class="px-6 py-4 text-center">
                                 <button onclick="abrirModal('${c.id_usuario}', '${c.nombres} ${c.apellidos}', '${c.email}', '${c.tipo_usuario}')" 
                                     class="bg-white border border-[#5852CB] text-[#5852CB] hover:bg-[#5852CB] hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm flex items-center justify-center gap-2 mx-auto">
-                                    <i class="fa-solid fa-pen-to-square"></i> Promover / Editar
+                                    <i class="fa-solid fa-pen-to-square"></i> Editar
                                 </button>
                             </td>
                         `;
@@ -211,7 +238,6 @@
             document.getElementById('modalEmail').innerText = email;
             document.getElementById('modalAvatar').innerText = nombre.charAt(0).toUpperCase();
             
-            // Establecer el valor del select
             const select = document.getElementById('modalSelectRol');
             select.value = rolActual;
 
@@ -251,7 +277,7 @@
                 if (result.success) {
                     mostrarToast("¡Cambios guardados correctamente!", "success");
                     cerrarModal();
-                    cargarCoaches(); // Recargar la tabla para ver cambios
+                    cargarCoaches(); // Recargar la tabla para ver cambios y validaciones
                 } else {
                     mostrarToast("Error: " + result.message, "error");
                 }

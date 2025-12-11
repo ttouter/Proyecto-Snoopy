@@ -23,14 +23,35 @@ try {
 
     $method = $_SERVER['REQUEST_METHOD'];
 
-    // --- GET: LISTAR USUARIOS (COACHES Y JUECES) ---
+    // --- GET: LISTAR USUARIOS (COACHES Y JUECES) CON DETALLES DE CATEGORÍAS ---
     if ($method === 'GET') {
-        // Obtenemos Coaches y aquellos que ya son Jueces para poder editarlos también
-        $sql = "SELECT id_usuario, nombres, apellidos, email, escuela_proc, tipo_usuario 
-                FROM usuarios 
-                WHERE (tipo_usuario = 'COACH' OR tipo_usuario = 'COACH_JUEZ' OR tipo_usuario = 'JUEZ') 
-                  AND activo = 1 
-                ORDER BY nombres ASC";
+        // Obtenemos Coaches, Jueces y Ambos. 
+        // Agregamos subconsultas para traer las categorías donde participan.
+        $sql = "SELECT 
+                    u.id_usuario, 
+                    u.nombres, 
+                    u.apellidos, 
+                    u.email, 
+                    u.escuela_proc, 
+                    u.tipo_usuario,
+                    -- Subconsulta: Categorías donde tiene equipos (Rol Coach)
+                    (
+                        SELECT GROUP_CONCAT(DISTINCT c.nombre_categoria SEPARATOR ', ')
+                        FROM equipos e
+                        JOIN categorias c ON e.id_categoria = c.id_categoria
+                        WHERE e.id_coach = u.id_usuario AND e.activo = 1
+                    ) as categorias_equipos,
+                    -- Subconsulta: Categorías donde es juez (Rol Juez)
+                    (
+                        SELECT GROUP_CONCAT(DISTINCT c.nombre_categoria SEPARATOR ', ')
+                        FROM jueces_eventos je
+                        JOIN categorias c ON je.id_categoria = c.id_categoria
+                        WHERE je.id_juez = u.id_usuario
+                    ) as categorias_juez
+                FROM usuarios u 
+                WHERE (u.tipo_usuario = 'COACH' OR u.tipo_usuario = 'COACH_JUEZ' OR u.tipo_usuario = 'JUEZ') 
+                  AND u.activo = 1 
+                ORDER BY u.nombres ASC";
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
@@ -60,8 +81,7 @@ try {
             throw new Exception("El rol seleccionado no es válido.");
         }
 
-        // Ejecutamos UPDATE directo para flexibilidad total
-        // (El SP original era muy restrictivo solo permitiendo de COACH -> COACH_JUEZ)
+        // Ejecutamos UPDATE directo
         $sql = "UPDATE usuarios SET tipo_usuario = :rol WHERE id_usuario = :id";
         
         $stmt = $pdo->prepare($sql);
