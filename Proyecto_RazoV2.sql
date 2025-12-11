@@ -390,4 +390,88 @@ BEGIN
         (SELECT COUNT(*) FROM eventos WHERE activo=1) as eventos_activos;
 END //
 
+
+-- --------------------------------------------------------------------------------
+-- NUEVOS PROCEDIMIENTOS DE GESTIÓN DE INTEGRANTES
+-- --------------------------------------------------------------------------------
+
+-- Listar integrantes (Actualizado para devolver ID)
+DROP PROCEDURE IF EXISTS ListarIntegrantesPorEquipo;
+CREATE PROCEDURE ListarIntegrantesPorEquipo(IN p_id_equipo INT)
+BEGIN
+    SELECT id_integrante, nombre_completo, edad, grado, escuela 
+    FROM integrantes 
+    WHERE id_equipo = p_id_equipo;
+END //
+
+-- Eliminar integrante con seguridad (Verifica dueño del equipo)
+DROP PROCEDURE IF EXISTS EliminarIntegrante;
+CREATE PROCEDURE EliminarIntegrante(
+    IN p_id_integrante INT, 
+    IN p_id_coach INT, 
+    OUT p_resultado VARCHAR(255)
+)
+BEGIN
+    DECLARE v_id_equipo INT;
+    DECLARE v_owner_coach INT;
+    
+    -- Obtener el equipo al que pertenece el integrante
+    SELECT id_equipo INTO v_id_equipo FROM integrantes WHERE id_integrante = p_id_integrante;
+    
+    IF v_id_equipo IS NULL THEN
+        SET p_resultado = 'ERROR: Integrante no encontrado';
+    ELSE
+        -- Verificar quién es el coach dueño del equipo
+        SELECT id_coach INTO v_owner_coach FROM equipos WHERE id_equipo = v_id_equipo;
+        
+        IF v_owner_coach = p_id_coach THEN
+            DELETE FROM integrantes WHERE id_integrante = p_id_integrante;
+            SET p_resultado = 'ÉXITO: Integrante eliminado';
+        ELSE
+            SET p_resultado = 'ERROR: No tienes permiso para eliminar este integrante';
+        END IF;
+    END IF;
+END //
+
+-- Editar integrante (Opcional, por si se requiere editar en lugar de borrar/agregar)
+DROP PROCEDURE IF EXISTS EditarIntegrante;
+CREATE PROCEDURE EditarIntegrante(
+    IN p_id_integrante INT,
+    IN p_id_coach INT,
+    IN p_nombre VARCHAR(150),
+    IN p_edad INT,
+    IN p_grado INT,
+    OUT p_resultado VARCHAR(255)
+)
+BEGIN
+    DECLARE v_id_equipo INT;
+    DECLARE v_owner_coach INT;
+    DECLARE v_cat INT;
+    
+    SELECT id_equipo INTO v_id_equipo FROM integrantes WHERE id_integrante = p_id_integrante;
+    
+    IF v_id_equipo IS NULL THEN
+        SET p_resultado = 'ERROR: Integrante no encontrado';
+    ELSE
+        SELECT id_coach, id_categoria INTO v_owner_coach, v_cat FROM equipos WHERE id_equipo = v_id_equipo;
+        
+        IF v_owner_coach = p_id_coach THEN
+            -- Revalidamos reglas de negocio
+            IF NOT VerificarEdadCategoria(p_edad, v_cat) THEN 
+                SET p_resultado = 'ERROR: Edad no permitida para la categoría';
+            ELSEIF NOT VerificarGradoCategoria(p_grado, v_cat) THEN 
+                SET p_resultado = 'ERROR: Grado escolar no válido';
+            ELSE
+                UPDATE integrantes 
+                SET nombre_completo = p_nombre, edad = p_edad, grado = p_grado
+                WHERE id_integrante = p_id_integrante;
+                SET p_resultado = 'ÉXITO: Integrante actualizado';
+            END IF;
+        ELSE
+            SET p_resultado = 'ERROR: No tienes permiso para editar este integrante';
+        END IF;
+    END IF;
+END //
+-- --------------------------------------------------------------------------------
+
 DELIMITER ;
