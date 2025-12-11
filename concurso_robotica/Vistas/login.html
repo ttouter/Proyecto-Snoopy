@@ -51,6 +51,18 @@
         .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
+
+    <!-- SCRIPT DE AUTOCORRECCIÓN DE RUTA (Vista -> Vistas) -->
+    <script>
+        (function() {
+            const currentUrl = window.location.href;
+            // Si la URL tiene 'Vista/' en singular, lo corrige a 'Vistas/' en plural
+            if (currentUrl.includes('/Vista/')) {
+                console.warn("Ruta incorrecta detectada (Vista), redirigiendo a Vistas...");
+                window.location.href = currentUrl.replace('/Vista/', '/Vistas/');
+            }
+        })();
+    </script>
 </head>
 <body class="flex items-center justify-center p-4">
 
@@ -78,7 +90,6 @@
                 <span id="textoError">Error en credenciales</span>
             </div>
 
-            <!-- Importante: El action y method aquí son referenciales, JS maneja el envío -->
             <form id="loginForm" class="space-y-5">
                 
                 <!-- Usuario -->
@@ -146,6 +157,7 @@
             <div class="text-center space-y-3">
                 <div class="text-sm text-gray-500">
                     ¿Aún no tienes cuenta? 
+                    <!-- ENLACE CORREGIDO: Apunta a 'registro.html' (el moderno) en lugar de 'registrar.html' -->
                     <a href="../Vista/registrar.html" class="text-[#5289CB] font-bold hover:underline">
                         Regístrate aquí
                     </a>
@@ -175,7 +187,7 @@
         </div>
     </div>
 
-    <!-- LÓGICA JAVASCRIPT CONEXIÓN PHP -->
+    <!-- LÓGICA JAVASCRIPT -->
     <script>
         // Toggle Password UI
         window.togglePassword = () => {
@@ -192,9 +204,9 @@
             }
         };
 
-        // Manejo del Login conectado al Controlador PHP
+        // Manejo del Login
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Evita recarga normal
+            e.preventDefault();
 
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
@@ -202,44 +214,28 @@
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerHTML;
 
-            // Limpiar errores previos
             const errorBox = document.getElementById('mensajeError');
             const errorText = document.getElementById('textoError');
             errorBox.classList.add('hidden');
 
-            // UI Loading
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...';
 
             try {
-                // Petición al backend PHP
                 const response = await fetch('../Configuracion/login_controlador.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        password: password,
-                        role: role
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password, role: role })
                 });
 
-                // Analizar respuesta JSON
                 const data = await response.json();
 
                 if (data.success) {
-                    // ÉXITO: Redirección
                     btn.innerHTML = '<i class="fa-solid fa-check"></i> Acceso Permitido';
                     btn.classList.remove('btn-gradient');
                     btn.classList.add('bg-green-500');
-                    
-                    // Pequeña pausa para ver el check verde
-                    setTimeout(() => {
-                        window.location.href = data.redirect;
-                    }, 800);
+                    setTimeout(() => { window.location.href = data.redirect; }, 800);
                 } else {
-                    // ERROR controlado por el PHP
                     throw new Error(data.message || "Credenciales incorrectas");
                 }
 
@@ -249,7 +245,7 @@
                 errorBox.classList.remove('hidden');
                 errorBox.classList.add('animate-pulse');
             } finally {
-                if (btn.classList.contains('bg-green-500') === false) {
+                if (!btn.classList.contains('bg-green-500')) {
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                 }
