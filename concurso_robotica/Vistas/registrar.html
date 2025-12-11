@@ -3,81 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Concurso de Robótica - Registro</title>
+    <title>Concurso de Robótica - Acceso</title>
     
-    <!-- Librerías Externas -->
+    <!-- Tailwind CSS (Framework de utilidades) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     
-    <!-- CSS Personalizado -->
+    <!-- FontAwesome (Iconos) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Hoja de Estilos Personalizada -->
     <link rel="stylesheet" href="../Diseño/style.css">
 </head>
-<body class="flex items-center justify-center p-4 py-8">
+<body class="flex items-center justify-center p-4">
 
-    <div class="w-full max-w-[700px] flex flex-col items-center space-y-6">
+    <div class="w-full max-w-[450px] flex flex-col items-center space-y-6">
         
+        <!-- LOGO Y TÍTULO -->
         <div class="text-center space-y-2">
-            <h1 class="text-white text-3xl font-bold tracking-wide drop-shadow-md">CONCURSO DE ROBÓTICA</h1>
-            <p class="text-white/90 text-lg font-medium">Registro de Participante</p>
+            <div class="bg-white/10 p-4 rounded-full inline-block mb-2 backdrop-blur-sm">
+                <i class="fa-solid fa-robot text-white text-6xl shadow-sm"></i>
+            </div>
+            
+            <h1 class="text-white text-3xl font-bold tracking-wide drop-shadow-md">
+                CONCURSO DE ROBÓTICA
+            </h1>
+            <p class="text-white/90 text-lg font-medium">
+                Sistema de Acceso
+            </p>
         </div>
 
-        <div class="bg-white w-full rounded-2xl shadow-2xl p-8 md:p-10 space-y-6 animate-fade-in-up relative">
+        <!-- TARJETA DEL FORMULARIO -->
+        <div class="bg-white w-full rounded-2xl shadow-2xl p-8 space-y-6 animate-fade-in-up">
             
-            <div class="border-b border-gray-100 pb-4">
-                <h2 class="text-[#2d3748] text-2xl font-bold">Información del Participante</h2>
+            <!-- Mensaje de Error -->
+            <div id="mensajeError" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-semibold flex items-center">
+                <i class="fa-solid fa-circle-exclamation mr-2"></i>
+                <span id="textoError">Error en credenciales</span>
             </div>
 
-            <div id="alertBox" class="hidden px-4 py-3 rounded-lg text-sm font-semibold flex items-center gap-2">
-                <i id="alertIcon"></i><span id="alertMessage"></span>
-            </div>
-
-            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-5">
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div class="space-y-1">
-                        <label class="block text-gray-600 font-bold text-sm ml-1">Nombres *</label>
-                        <input type="text" id="nombres" class="custom-input w-full px-4 py-3 rounded-lg bg-gray-50" required>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="block text-gray-600 font-bold text-sm ml-1">Apellidos *</label>
-                        <input type="text" id="apellidos" class="custom-input w-full px-4 py-3 rounded-lg bg-gray-50" required>
-                    </div>
-                </div>
-
+                <!-- Usuario -->
                 <div class="space-y-1">
-                    <label class="block text-gray-600 font-bold text-sm ml-1">Escuela *</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]"><i class="fa-solid fa-school"></i></span>
-                        <input type="text" id="escuela" class="custom-input w-full pl-10 pr-4 py-3 rounded-lg bg-gray-50" required>
-                    </div>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="block text-gray-600 font-bold text-sm ml-1">Correo *</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]"><i class="fa-solid fa-envelope"></i></span>
-                        <input type="email" id="email" class="custom-input w-full pl-10 pr-4 py-3 rounded-lg bg-gray-50" required>
-                    </div>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="block text-gray-600 font-bold text-sm ml-1">Contraseña *</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]"><i class="fa-solid fa-lock"></i></span>
-                        <input type="password" id="password" class="custom-input w-full pl-10 pr-4 py-3 rounded-lg bg-gray-50" required>
-                    </div>
-                </div>
-
-                <!-- CAMBIO: Tipo de Usuario ahora es un SELECT con 3 opciones -->
-                <div class="space-y-1">
-                    <label class="block text-gray-600 font-bold text-sm ml-1">Tipo de Usuario *</label>
+                    <label class="block text-[#5289CB] font-bold text-sm ml-1">
+                        Usuario <span class="text-xs font-normal text-gray-400">(Email)</span>
+                    </label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]">
-                            <i class="fa-solid fa-users"></i>
+                            <i class="fa-solid fa-user"></i>
                         </span>
-                        <select id="tipoUsuario" class="custom-input w-full pl-10 pr-8 py-3 rounded-lg text-gray-700 bg-gray-50 appearance-none cursor-pointer" required>
-                            <option value="COACH" selected>Coach</option>
+                        <!-- ID username se mapea a 'email' en el controlador -->
+                        <input type="email" id="username" 
+                               class="custom-input w-full pl-10 pr-4 py-3 rounded-lg text-gray-700 bg-gray-50"
+                               placeholder="ejemplo@correo.com" required>
+                    </div>
+                </div>
+
+                <!-- Contraseña -->
+                <div class="space-y-1">
+                    <label class="block text-[#5289CB] font-bold text-sm ml-1">Contraseña</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="password" 
+                               class="custom-input w-full pl-10 pr-10 py-3 rounded-lg text-gray-700 bg-gray-50"
+                               placeholder="••••••••" required>
+                        <button type="button" onclick="togglePassword()" 
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-[#5289CB] cursor-pointer">
+                            <i class="fa-solid fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Perfil -->
+                <div class="space-y-1">
+                    <label class="block text-[#5289CB] font-bold text-sm ml-1">Perfil</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]">
+                            <i class="fa-solid fa-id-badge"></i>
+                        </span>
+                        <select id="profile" class="custom-input w-full pl-10 pr-8 py-2.5 rounded-lg text-gray-700 bg-gray-50 appearance-none cursor-pointer" required>
+                            <option value="" disabled selected>Selecciona tu perfil</option>
+                            <option value="COACH">Coach</option>
                             <option value="JUEZ">Juez</option>
                             <option value="ADMIN">Administrador</option>
                         </select>
@@ -87,68 +98,145 @@
                     </div>
                 </div>
 
-                <div class="flex items-start gap-3 pt-2">
-                    <input type="checkbox" id="terms" class="mt-1 w-4 h-4 cursor-pointer">
-                    <label class="text-sm text-gray-600">Acepto los términos y condiciones.</label>
-                </div>
+                <!-- Botón -->
+                <button type="submit" 
+                        class="btn-gradient w-full text-white font-bold py-3.5 rounded-lg text-lg shadow-lg mt-4 flex justify-center items-center gap-2">
+                    <span>INICIAR SESIÓN</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
 
-                <div class="space-y-4 pt-4">
-                    <button type="submit" class="btn-gradient w-full text-white font-bold py-3.5 rounded-lg text-lg shadow-lg flex justify-center items-center gap-2">
-                        <span>REGISTRAR</span> <i class="fa-solid fa-user-plus"></i>
-                    </button>
-
-                    <div class="text-center text-sm text-gray-500">
-                        ¿Ya tiene cuenta? 
-                        <a href="login.html" class="text-[#5852CB] font-bold underline hover:text-[#52C5CB]">Iniciar Sesión</a>
-                    </div>
-                </div>
             </form>
+
+            <div class="border-t border-gray-100 my-4"></div>
+
+            <div class="text-center space-y-3">
+                <div class="text-sm text-gray-500">
+                    ¿Aún no tienes cuenta? 
+                    <a href="registrar.html" class="text-[#5289CB] font-bold hover:underline">
+                        Regístrate aquí
+                    </a>
+                </div>
+                <div>
+                    <a href="#" onclick="alert('Contacte al administrador del sistema.')" class="text-xs text-gray-400 hover:text-[#5289CB] transition-colors">
+                        ¿Problemas para acceder? Contactar soporte
+                    </a>
+                </div>
+            </div>
         </div>
-        <div class="h-10"></div>
+
+        <!-- PANEL INFERIOR -->
+        <div class="info-panel w-full rounded-xl p-5 text-white shadow-lg border border-white/20">
+            <h3 class="font-bold text-sm mb-3 border-b border-white/30 pb-2">
+                <i class="fa-solid fa-circle-info mr-1"></i> Perfiles del Sistema:
+            </h3>
+            <ul class="space-y-2 text-sm opacity-90">
+                <li class="flex items-start">
+                    <i class="fa-solid fa-check text-[#aefeff] mt-1 mr-2 text-xs"></i>
+                    <span><strong>Administrador:</strong> Gestión completa del sistema.</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa-solid fa-check text-[#aefeff] mt-1 mr-2 text-xs"></i>
+                    <span><strong>Juez:</strong> Evaluación y calificación de proyectos.</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fa-solid fa-check text-[#aefeff] mt-1 mr-2 text-xs"></i>
+                    <span><strong>Coach:</strong> Administración de equipos participantes.</span>
+                </li>
+            </ul>
+            <div class="mt-4 flex items-center text-xs text-yellow-200 bg-yellow-500/10 p-2 rounded">
+                <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                <span>No comparta sus credenciales con terceros.</span>
+            </div>
+        </div>
+
+        <div class="h-5"></div>
     </div>
 
+    <!-- LÓGICA JAVASCRIPT -->
     <script>
-        function handleRegister(event) {
-            event.preventDefault();
-            const terms = document.getElementById('terms').checked;
-            const perfil = document.getElementById('tipoUsuario').value; // Obtenemos el valor seleccionado
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
             
-            if (!terms) {
-                mostrarAlerta('Debe aceptar los términos.', 'error');
-                return;
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
             }
-
-            if (!perfil) {
-                mostrarAlerta('Debe seleccionar un tipo de usuario.', 'error');
-                return;
-            }
-
-            // Simulación de éxito
-            mostrarAlerta(`¡Registro exitoso como ${perfil}! Redirigiendo...`, 'success');
-
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 2000);
         }
 
-        function mostrarAlerta(msg, tipo) {
-            const box = document.getElementById('alertBox');
-            const txt = document.getElementById('alertMessage');
-            const icon = document.getElementById('alertIcon');
-            
-            box.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-green-50', 'text-green-600', 'border-green-200');
-            icon.className = '';
+        async function handleLogin(event) {
+            event.preventDefault();
 
-            if (tipo === 'error') {
-                box.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
-                icon.classList.add('fa-solid', 'fa-circle-exclamation');
-            } else {
-                box.classList.add('bg-green-50', 'text-green-600', 'border-green-200');
-                icon.classList.add('fa-solid', 'fa-check-circle');
-            }
+            // Obtenemos valores
+            const email = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            const role = document.getElementById('profile').value;
             
-            txt.innerText = msg;
-            box.classList.add('animate-pulse');
+            // Elementos de UI
+            const errorBox = document.getElementById('mensajeError');
+            const textoError = document.getElementById('textoError');
+            const btn = event.target.querySelector('button[type="submit"]');
+
+            // 1. Validaciones básicas en cliente
+            if (!email || !pass || !role) {
+                mostrarError("Por favor complete todos los campos");
+                return;
+            }
+
+            // UI Loading
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Validando...';
+            errorBox.classList.add('hidden');
+
+            try {
+                // 2. Petición POST al Controlador PHP
+                // Esto llamará a login_controlador.php -> CALL sp_ObtenerDatosLogin(?, ?)
+                const response = await fetch('../Configuracion/login_controlador.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: pass,
+                        role: role
+                    })
+                });
+
+                // 3. Procesar Respuesta
+                const data = await response.json();
+
+                if (data.success) {
+                    // Login exitoso: Redirigir a la página indicada por el backend
+                    window.location.href = data.redirect || 'index.html';
+                } else {
+                    // Error de credenciales o base de datos
+                    mostrarError(data.message || "Error al iniciar sesión");
+                }
+
+            } catch (error) {
+                console.error("Error de conexión:", error);
+                mostrarError("No se pudo conectar con el servidor. Revise su conexión o la configuración de base de datos.");
+            } finally {
+                // Restaurar botón
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function mostrarError(mensaje) {
+            const errorBox = document.getElementById('mensajeError');
+            const textoError = document.getElementById('textoError');
+            textoError.innerText = mensaje;
+            errorBox.classList.remove('hidden');
+            errorBox.classList.add('animate-pulse');
+            setTimeout(() => errorBox.classList.remove('animate-pulse'), 500);
         }
     </script>
 </body>
