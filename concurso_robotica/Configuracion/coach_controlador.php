@@ -55,14 +55,8 @@ try {
                 throw new Exception("No tienes permiso para ver este equipo.");
             }
 
-            // NOTA: Se recomienda actualizar el SP en la base de datos para que devuelva también el 'id_integrante'
-            // Actual: SELECT nombre_completo, edad, grado FROM integrantes...
-            // Recomendado: SELECT id_integrante, nombre_completo, edad, grado FROM integrantes...
-            // Si no se actualiza, la funcionalidad de borrar fallará.
-            
-            // Usamos consulta directa temporalmente para asegurar que obtenemos el ID para poder borrar después
-            // Si prefieres usar estrictamente el SP: $stmt = $pdo->prepare("CALL ListarIntegrantesPorEquipo(:id)");
-            $stmt = $pdo->prepare("SELECT id_integrante, nombre_completo, edad, grado FROM integrantes WHERE id_equipo = :id");
+            // AHORA USAMOS EL SP ACTUALIZADO que ya devuelve id_integrante
+            $stmt = $pdo->prepare("CALL ListarIntegrantesPorEquipo(:id)");
             $stmt->bindParam(':id', $idEquipo, PDO::PARAM_INT);
             $stmt->execute();
             $integrantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -131,21 +125,22 @@ try {
             }
         }
         elseif ($action === 'eliminar_integrante') {
-            // Este proceso no estaba en el SQL original, lo agregamos como consulta directa segura
             $idIntegrante = $input['id_integrante'];
 
-            // Borrado seguro verificando que el integrante pertenezca a un equipo de este coach
-            $sql = "DELETE i FROM integrantes i 
-                    INNER JOIN equipos e ON i.id_equipo = e.id_equipo 
-                    WHERE i.id_integrante = :idi AND e.id_coach = :idc";
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([':idi' => $idIntegrante, ':idc' => $idCoach]);
+            // USANDO EL NUEVO STORED PROCEDURE
+            // EliminarIntegrante(IN p_id_integrante INT, IN p_id_coach INT, OUT p_resultado VARCHAR(255))
+            $stmt = $pdo->prepare("CALL EliminarIntegrante(:idi, :idc, @res)");
+            $stmt->bindParam(':idi', $idIntegrante);
+            $stmt->bindParam(':idc', $idCoach);
+            $stmt->execute();
+            $stmt->closeCursor();
 
-            if ($stmt->rowCount() > 0) {
-                $response = ["success" => true, "message" => "Integrante eliminado."];
+            $output = $pdo->query("SELECT @res as mensaje")->fetch(PDO::FETCH_ASSOC);
+            
+            if (strpos($output['mensaje'], 'ÉXITO') !== false) {
+                $response = ["success" => true, "message" => "Integrante eliminado correctamente."];
             } else {
-                throw new Exception("No se pudo eliminar (o no tienes permiso).");
+                throw new Exception($output['mensaje']);
             }
         }
     }
