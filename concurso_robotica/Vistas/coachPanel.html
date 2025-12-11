@@ -39,10 +39,10 @@
             
             <div class="flex items-center gap-4">
                 <div class="text-right hidden md:block">
-                    <p class="text-sm font-bold" id="coachName">Cargando...</p>
+                    <p class="text-sm font-bold" id="coachName">Coach</p>
                     <p class="text-[10px] text-blue-100 bg-white/20 px-2 py-0.5 rounded-full inline-block">Coach Verificado</p>
                 </div>
-                <!-- BOTÓN LOGOUT CORREGIDO -->
+                <!-- BOTÓN LOGOUT -->
                 <button onclick="handleLogout()" class="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors" title="Cerrar Sesión">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
@@ -221,7 +221,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = 'default-app-id'; // Valor por defecto o dinámico
+        const appId = 'default-app-id';
 
         let currentCoach = null;
         let currentTeamId = null;
@@ -232,26 +232,34 @@
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     currentCoach = user;
-                    document.getElementById('authOverlay').classList.add('hidden');
-                    
-                    // Simular obtención de datos del usuario
-                    document.getElementById('coachName').innerText = "Coach Usuario"; 
-                    
+                    // document.getElementById('authOverlay').classList.add('hidden'); // Comentado por seguridad
+                    // Aquí podrías pedir nombre real al PHP si quisieras
                     cargarEventos();
                     cargarMisEquipos();
                 } else {
-                    document.getElementById('authOverlay').classList.remove('hidden');
+                    // document.getElementById('authOverlay').classList.remove('hidden');
                     signInAnonymously(auth).catch(console.error);
                 }
             });
         };
         initAuth();
 
-        // --- LOGOUT CORREGIDO ---
+        // --- LOGOUT CORREGIDO (HÍBRIDO) ---
         window.handleLogout = () => {
-            signOut(auth).then(() => {
-                window.location.href = 'login.html';
-            });
+            const irALogoutPHP = () => {
+                window.location.href = '../Configuracion/logout.php';
+            };
+
+            if (auth) {
+                signOut(auth)
+                    .then(irALogoutPHP)
+                    .catch((error) => {
+                        console.warn("Error Firebase signOut:", error);
+                        irALogoutPHP();
+                    });
+            } else {
+                irALogoutPHP();
+            }
         };
 
         // --- 1. CARGAR EVENTOS (Para el Select) ---

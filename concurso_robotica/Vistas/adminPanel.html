@@ -15,21 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
 
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #2d3748; }
-        .gradient-header { background: linear-gradient(to right, #52C5CB, #5852CB); }
-        
-        .nav-item { transition: all 0.2s; }
-        .nav-item:hover { background-color: #f3f4f6; color: #5289CB; }
-        
-        .loader {
-            border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #52C5CB;
-            width: 20px; height: 20px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-    </style>
+    <link rel="stylesheet" href="../Diseño/style_admin.css">
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
@@ -144,30 +130,11 @@
         </main>
     </div>
 
-    <!-- LÓGICA JAVASCRIPT ROBUSTA -->
+    <!-- LÓGICA JAVASCRIPT CORREGIDA -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // 1. Lógica de redirección a prueba de errores de ruta (Vista vs Vistas)
-        const irAlLogin = () => {
-            console.log("Redirigiendo al login...");
-            
-            // INTENTO 1: Ruta relativa directa (ideal si están en la misma carpeta)
-            // Si estás en .../Vistas/adminPanel.html -> va a .../Vistas/login.html
-            // Si estás en .../Vista/adminPanel.html -> va a .../Vista/login.html (y fallará si la carpeta real es Vistas)
-            
-            // TRUCO: Si la URL actual contiene 'Vista/' (singular) incorrectamente, intentamos corregirla.
-            const currentUrl = window.location.href;
-            if (currentUrl.includes('/Vista/')) {
-                // Forzamos la corrección a Plural si detectamos el error común
-                window.location.href = currentUrl.replace('/Vista/', '/Vistas/').replace('adminPanel.html', 'login.html');
-            } else {
-                // Comportamiento normal
-                window.location.href = '../Vistas/login.html';
-            }
-        };
 
         let auth = null;
 
@@ -182,24 +149,29 @@
                 onAuthStateChanged(auth, (user) => {
                     if (!user) signInAnonymously(auth).catch(console.error);
                 });
-            } else {
-                console.warn("Modo sin Firebase: No se encontró configuración en la URL.");
             }
         } catch (error) {
             console.error("Error inicializando Firebase:", error);
         }
 
-        // 3. Función global de logout
+        // --- FUNCIÓN DE LOGOUT HÍBRIDA (FIREBASE + PHP) ---
         window.handleLogout = () => {
+            const irALogoutPHP = () => {
+                // Redirige al script PHP que destruye la sesión del servidor
+                window.location.href = '../Configuracion/logout.php';
+            };
+
             if (auth) {
+                // Si existe Firebase, cerramos sesión ahí primero por limpieza
                 signOut(auth)
-                    .then(irAlLogin)
+                    .then(irALogoutPHP)
                     .catch((error) => {
-                        console.error("Error en signOut de Firebase:", error);
-                        irAlLogin();
+                        console.warn("Error cerrando Firebase, forzando salida PHP...", error);
+                        irALogoutPHP();
                     });
             } else {
-                irAlLogin();
+                // Si no hay Firebase, vamos directo al PHP
+                irALogoutPHP();
             }
         };
     </script>
