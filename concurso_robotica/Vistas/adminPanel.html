@@ -22,22 +22,8 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
 </head>
-<body class="h-screen flex flex-col overflow-hidden text-gray-800">
-
-    <!-- Auth Overlay (Si no está logueado) -->
-    <div id="authOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 backdrop-blur-sm">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full">
-            <i class="fa-solid fa-robot text-5xl gradient-text mb-4"></i>
-            <h2 class="text-2xl font-bold mb-2 text-gray-700">Acceso Admin</h2>
-            <p class="text-gray-500 mb-6 text-sm">Conectando al sistema...</p>
-            <div class="flex justify-center">
-                <div class="loader"></div>
-            </div>
-        </div>
-    </div>
-
     <!-- HEADER SUPERIOR -->
-    <header class="gradient-header text-white shadow-lg z-10 shrink-0">
+    <header class="bg-gradient-to-r from-[#52C5CB] to-[#5852CB] text-white shadow-lg z-10 shrink-0">
         <div class="container mx-auto px-6 py-3 flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
@@ -54,8 +40,9 @@
                     <p class="text-sm font-semibold" id="adminName">Cargando...</p>
                     <p class="text-xs text-green-200"><i class="fa-solid fa-circle text-[8px] mr-1"></i>En línea</p>
                 </div>
-                <button onclick="handleLogout()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium">
-                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Salir
+                <!-- Botón Header (Opcional, ya que agregamos el grande en el sidebar) -->
+                <button onclick="handleLogout()" class="md:hidden bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium">
+                    <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </div>
@@ -81,11 +68,12 @@
                 </div>
             </div>
             
+            <!-- SECCIÓN INFERIOR EDITADA: BOTÓN DE SALIR -->
             <div class="mt-auto p-6 border-t border-gray-100">
-                <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                    <h4 class="text-sm font-bold text-blue-800 mb-1"><i class="fa-solid fa-circle-info mr-1"></i> Estado</h4>
-                    <p class="text-xs text-blue-600">Sistema conectado y sincronizado.</p>
-                </div>
+                <button onclick="handleLogout()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 border border-red-200 shadow-sm group">
+                    <i class="fa-solid fa-power-off group-hover:scale-110 transition-transform"></i>
+                    <span>Cerrar Sesión</span>
+                </button>
             </div>
         </nav>
 
@@ -250,7 +238,7 @@
                                             <option value="UNIVERSIDAD">UNIVERSIDAD</option>
                                         </select>
                                     </div>
-                                    <button onclick="asignarJuez()" class="w-full btn-gradient text-white py-2 rounded-lg font-bold shadow-md mt-2">
+                                    <button onclick="asignarJuez()" class="w-full bg-gradient-to-r from-[#5289CB] to-[#5852CB] text-white py-2 rounded-lg font-bold shadow-md mt-2 hover:opacity-90">
                                         <i class="fa-solid fa-plus-circle mr-1"></i> Asignar al Evento
                                     </button>
                                 </div>
@@ -362,7 +350,7 @@
                     document.getElementById('authOverlay').classList.remove('hidden');
                     signInAnonymously(auth).catch((error) => {
                         console.error("Error Auth:", error);
-                        alert("Error de autenticación: " + error.message);
+                        // No mostrar alerta intrusiva en demo
                     });
                 }
             });
@@ -370,7 +358,10 @@
         initAuth();
 
         window.handleLogout = () => {
-            signOut(auth).then(() => window.location.reload());
+            // Cierra sesión en Firebase y luego redirige al login
+            signOut(auth).then(() => {
+                window.location.href = 'login.html';
+            });
         };
 
         function loadStats() {
@@ -454,6 +445,7 @@
 
         window.eliminarEvento = async () => {
             if(!currentEventId) return;
+            // Usamos un modal propio o confirm simple por limitación de iframe, pero preferible confirm para admin
             if(!confirm("¿Está seguro de eliminar este evento? Esta acción no se puede deshacer.")) return;
 
             try {

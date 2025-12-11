@@ -14,13 +14,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
-
     <style>
-        /* Estilos base (originalmente en style.css) */
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(to bottom, #52C5CB, #5852CB);
@@ -53,7 +47,6 @@
             -webkit-backdrop-filter: blur(5px);
         }
         
-        /* Utilidades extra */
         .hidden { display: none; }
         .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
@@ -85,7 +78,8 @@
                 <span id="textoError">Error en credenciales</span>
             </div>
 
-            <form id="loginForm" class="space-y-5" action="../Configuracion/login_controlador.php" method="POST">
+            <!-- Importante: El action y method aquí son referenciales, JS maneja el envío -->
+            <form id="loginForm" class="space-y-5">
                 
                 <!-- Usuario -->
                 <div class="space-y-1">
@@ -119,7 +113,7 @@
                     </div>
                 </div>
 
-                <!-- Perfil (Solo para validación visual, auth decide el rol real) -->
+                <!-- Perfil -->
                 <div class="space-y-1">
                     <label class="block text-[#5289CB] font-bold text-sm ml-1">Perfil</label>
                     <div class="relative">
@@ -181,20 +175,8 @@
         </div>
     </div>
 
-    <!-- LÓGICA JAVASCRIPT CON FIREBASE -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Configuración automática (simulada para este entorno)
-        // En producción, reemplaza con tu config real de Firebase Console
-        const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = 'default-app-id'; // ID de la app para la estructura de datos
-
+    <!-- LÓGICA JAVASCRIPT CONEXIÓN PHP -->
+    <script>
         // Toggle Password UI
         window.togglePassword = () => {
             const passwordInput = document.getElementById('password');
@@ -210,18 +192,19 @@
             }
         };
 
-        // Manejo del Login
+        // Manejo del Login conectado al Controlador PHP
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // Evita recarga normal
 
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
-            const selectedProfile = document.getElementById('profile').value;
+            const role = document.getElementById('profile').value;
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerHTML;
 
             // Limpiar errores previos
             const errorBox = document.getElementById('mensajeError');
+            const errorText = document.getElementById('textoError');
             errorBox.classList.add('hidden');
 
             // UI Loading
@@ -229,53 +212,44 @@
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...';
 
             try {
-                // 1. Autenticar con Firebase Auth
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
+                // Petición al backend PHP
+                const response = await fetch('../Configuracion/login_controlador.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        role: role
+                    })
+                });
 
-                // 2. Obtener datos del usuario desde Firestore
-                // Ruta: artifacts/{appId}/public/data/users/{uid}
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-                const docSnap = await getDoc(docRef);
+                // Analizar respuesta JSON
+                const data = await response.json();
 
-                if (docSnap.exists()) {
-                    const userData = docSnap.data();
-                    const userRole = userData.role;
-
-                    // 3. Verificar si el rol seleccionado coincide con el de la base de datos
-                    // (Opcional: podrías simplemente redirigir según userRole ignorando el select)
-                    if (userRole === selectedProfile || (userRole === 'COACH_JUEZ' && (selectedProfile === 'COACH' || selectedProfile === 'JUEZ'))) {
-                        
-                        // Éxito: Redirección
-                        btn.innerHTML = '<i class="fa-solid fa-check"></i> Acceso Permitido';
-                        btn.classList.add('bg-green-500');
-                        
-                        setTimeout(() => {
-                            if (selectedProfile === 'ADMIN') window.location.href = 'adminPanel.html';
-                            else if (selectedProfile === 'JUEZ') window.location.href = 'juezPanel.html';
-                            else if (selectedProfile === 'COACH') window.location.href = 'coachPanel.html';
-                        }, 1000);
-
-                    } else {
-                        throw new Error(`Tu cuenta no tiene permisos de ${selectedProfile}. Tu rol actual es: ${userRole}`);
-                    }
+                if (data.success) {
+                    // ÉXITO: Redirección
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Acceso Permitido';
+                    btn.classList.remove('btn-gradient');
+                    btn.classList.add('bg-green-500');
+                    
+                    // Pequeña pausa para ver el check verde
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 800);
                 } else {
-                    throw new Error("Usuario autenticado pero no encontrado en la base de datos.");
+                    // ERROR controlado por el PHP
+                    throw new Error(data.message || "Credenciales incorrectas");
                 }
 
             } catch (error) {
-                console.error("Login error:", error);
-                
-                let msg = "Error al iniciar sesión.";
-                if (error.code === 'auth/invalid-credential') msg = "Correo o contraseña incorrectos.";
-                else if (error.code === 'auth/user-not-found') msg = "El usuario no existe.";
-                else if (error.message) msg = error.message;
-
-                document.getElementById('textoError').innerText = msg;
+                console.error("Error Login:", error);
+                errorText.innerText = error.message;
                 errorBox.classList.remove('hidden');
                 errorBox.classList.add('animate-pulse');
             } finally {
-                if (!errorBox.classList.contains('hidden')) {
+                if (btn.classList.contains('bg-green-500') === false) {
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                 }
