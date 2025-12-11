@@ -62,7 +62,7 @@
 
     <!-- CONTENIDO PRINCIPAL -->
     <main class="flex-1 overflow-y-auto p-6 bg-[#f8f9fa]">
-        <div class="max-w-6xl mx-auto w-full h-full">
+        <div class="max-w-[90%] mx-auto w-full h-full">
 
             <!-- ======================= TAB 1: ROLES Y PERMISOS ======================= -->
             <div id="content-roles" class="tab-content active space-y-6">
@@ -93,6 +93,8 @@
                                 <tr>
                                     <th class="px-6 py-3">Usuario</th>
                                     <th class="px-6 py-3 text-center">Rol Actual</th>
+                                    <th class="px-6 py-3">Categoría Juez</th>
+                                    <th class="px-6 py-3">Categoría Coach</th>
                                     <th class="px-6 py-3">Conflictos / Estado</th>
                                     <th class="px-6 py-3 text-center">Acción</th>
                                 </tr>
@@ -234,7 +236,7 @@
         // =================================================================
         async function cargarTablaRoles() {
             const tbody = document.getElementById('tablaRoles');
-            tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center"><div class="loader mx-auto"></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center"><div class="loader mx-auto"></div></td></tr>';
 
             try {
                 const res = await fetch(`${API_URL}?action=listar_usuarios`);
@@ -252,6 +254,14 @@
                         const badgeColor = u.tipo_usuario === 'JUEZ' ? 'bg-purple-100 text-purple-700' : 
                                           (u.tipo_usuario === 'COACH_JUEZ' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700');
 
+                        const displayCatJuez = u.categorias_juez 
+                            ? `<span class="font-medium text-purple-700">${u.categorias_juez}</span>` 
+                            : '<span class="text-gray-300 italic text-xs">Ninguna</span>';
+                            
+                        const displayCatCoach = u.categorias_equipos 
+                            ? `<span class="font-medium text-blue-700">${u.categorias_equipos}</span>` 
+                            : '<span class="text-gray-300 italic text-xs">Ninguna</span>';
+
                         const tr = document.createElement('tr');
                         tr.className = `hover:bg-gray-50 border-b fila-rol ${tieneConflicto ? 'bg-red-50' : ''}`;
                         tr.innerHTML = `
@@ -262,6 +272,12 @@
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span class="${badgeColor} px-2 py-1 rounded text-[10px] font-bold border uppercase">${u.tipo_usuario.replace('_', ' ')}</span>
+                            </td>
+                            <td class="px-6 py-4 text-xs text-gray-600 max-w-xs break-words">
+                                ${displayCatJuez}
+                            </td>
+                            <td class="px-6 py-4 text-xs text-gray-600 max-w-xs break-words">
+                                ${displayCatCoach}
                             </td>
                             <td class="px-6 py-4 text-xs text-gray-500">
                                 ${tieneConflicto 
@@ -371,11 +387,22 @@
             const listaDiv = document.getElementById('listaDisponibles');
             listaDiv.innerHTML = '';
             
-            // Filtramos visualmente los que YA están asignados a 3 categorías (opcional) 
-            // o simplemente mostramos todos para arrastrar.
-            // Para simplificar: Mostramos todos. El SP valida si ya está en la categoría.
+            // 1. Crear conjunto de IDs de jueces YA asignados a cualquier categoría de este evento
+            const idsAsignados = new Set(asignados.map(a => a.id_usuario));
+
+            // 2. Filtrar disponibles: Solo mostramos los que NO están en el conjunto de asignados
+            const disponiblesParaMostrar = disponibles.filter(j => !idsAsignados.has(j.id_usuario));
+
+            if (disponiblesParaMostrar.length === 0) {
+                 listaDiv.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-40 text-gray-400 text-center">
+                        <i class="fa-solid fa-check-double text-3xl mb-2"></i>
+                        <p class="text-xs">Todos los jueces disponibles<br>han sido asignados.</p>
+                    </div>
+                 `;
+            }
             
-            disponibles.forEach(j => {
+            disponiblesParaMostrar.forEach(j => {
                 const card = document.createElement('div');
                 card.className = "bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing juez-card flex justify-between items-center";
                 card.draggable = true;
