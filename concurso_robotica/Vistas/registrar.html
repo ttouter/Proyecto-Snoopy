@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concurso de Robótica - Registro</title>
+    
+    <!-- Librerías Externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Personalizado -->
+    <link rel="stylesheet" href="../Diseño/style.css">
+</head>
+<body class="flex items-center justify-center p-4 py-8">
+
+    <div class="w-full max-w-[700px] flex flex-col items-center space-y-6">
+        
+        <div class="text-center space-y-2">
+            <h1 class="text-white text-3xl font-bold tracking-wide drop-shadow-md">CONCURSO DE ROBÓTICA</h1>
+            <p class="text-white/90 text-lg font-medium">Registro de Participante</p>
+        </div>
+
+        <div class="bg-white w-full rounded-2xl shadow-2xl p-8 md:p-10 space-y-6 animate-fade-in-up relative">
+            
+            <div class="border-b border-gray-100 pb-4">
+                <h2 class="text-[#2d3748] text-2xl font-bold">Información del Participante</h2>
+            </div>
+
+            <div id="alertBox" class="hidden px-4 py-3 rounded-lg text-sm font-semibold flex items-center gap-2">
+                <i id="alertIcon"></i><span id="alertMessage"></span>
+            </div>
+
+            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-5">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-1">
+                        <label class="block text-gray-600 font-bold text-sm ml-1">Nombres *</label>
+                        <input type="text" id="nombres" class="custom-input w-full px-4 py-3 rounded-lg bg-gray-50" required>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-gray-600 font-bold text-sm ml-1">Apellidos *</label>
+                        <input type="text" id="apellidos" class="custom-input w-full px-4 py-3 rounded-lg bg-gray-50" required>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-gray-600 font-bold text-sm ml-1">Escuela *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]"><i class="fa-solid fa-school"></i></span>
+                        <input type="text" id="escuela" class="custom-input w-full pl-10 pr-4 py-3 rounded-lg bg-gray-50" required>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-gray-600 font-bold text-sm ml-1">Correo *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]"><i class="fa-solid fa-envelope"></i></span>
+                        <input type="email" id="email" class="custom-input w-full pl-10 pr-4 py-3 rounded-lg bg-gray-50" required>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-gray-600 font-bold text-sm ml-1">Contraseña *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="password" class="custom-input w-full pl-10 pr-4 py-3 rounded-lg bg-gray-50" required>
+                    </div>
+                </div>
+
+                <!-- CAMBIO: Tipo de Usuario ahora es un SELECT con 3 opciones -->
+                <div class="space-y-1">
+                    <label class="block text-gray-600 font-bold text-sm ml-1">Tipo de Usuario *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#52C5CB]">
+                            <i class="fa-solid fa-users"></i>
+                        </span>
+                        <select id="tipoUsuario" class="custom-input w-full pl-10 pr-8 py-3 rounded-lg text-gray-700 bg-gray-50 appearance-none cursor-pointer" required>
+                            <option value="COACH" selected>Coach</option>
+                            <option value="JUEZ">Juez</option>
+                            <option value="ADMIN">Administrador</option>
+                        </select>
+                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-[#52C5CB]">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3 pt-2">
+                    <input type="checkbox" id="terms" class="mt-1 w-4 h-4 cursor-pointer">
+                    <label class="text-sm text-gray-600">Acepto los términos y condiciones.</label>
+                </div>
+
+                <div class="space-y-4 pt-4">
+                    <button type="submit" class="btn-gradient w-full text-white font-bold py-3.5 rounded-lg text-lg shadow-lg flex justify-center items-center gap-2">
+                        <span>REGISTRAR</span> <i class="fa-solid fa-user-plus"></i>
+                    </button>
+
+                    <div class="text-center text-sm text-gray-500">
+                        ¿Ya tiene cuenta? 
+                        <a href="login.html" class="text-[#5852CB] font-bold underline hover:text-[#52C5CB]">Iniciar Sesión</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="h-10"></div>
+    </div>
+
+    <script>
+        function handleRegister(event) {
+            event.preventDefault();
+            const terms = document.getElementById('terms').checked;
+            const perfil = document.getElementById('tipoUsuario').value; // Obtenemos el valor seleccionado
+            
+            if (!terms) {
+                mostrarAlerta('Debe aceptar los términos.', 'error');
+                return;
+            }
+
+            if (!perfil) {
+                mostrarAlerta('Debe seleccionar un tipo de usuario.', 'error');
+                return;
+            }
+
+            // Simulación de éxito
+            mostrarAlerta(`¡Registro exitoso como ${perfil}! Redirigiendo...`, 'success');
+
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 2000);
+        }
+
+        function mostrarAlerta(msg, tipo) {
+            const box = document.getElementById('alertBox');
+            const txt = document.getElementById('alertMessage');
+            const icon = document.getElementById('alertIcon');
+            
+            box.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-green-50', 'text-green-600', 'border-green-200');
+            icon.className = '';
+
+            if (tipo === 'error') {
+                box.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
+                icon.classList.add('fa-solid', 'fa-circle-exclamation');
+            } else {
+                box.classList.add('bg-green-50', 'text-green-600', 'border-green-200');
+                icon.classList.add('fa-solid', 'fa-check-circle');
+            }
+            
+            txt.innerText = msg;
+            box.classList.add('animate-pulse');
+        }
+    </script>
+</body>
+</html>
