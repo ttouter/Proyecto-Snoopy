@@ -144,30 +144,63 @@
         </main>
     </div>
 
-    <!-- LÓGICA JAVASCRIPT -->
+    <!-- LÓGICA JAVASCRIPT ROBUSTA -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        // 1. Lógica de redirección a prueba de errores de ruta (Vista vs Vistas)
+        const irAlLogin = () => {
+            console.log("Redirigiendo al login...");
+            
+            // INTENTO 1: Ruta relativa directa (ideal si están en la misma carpeta)
+            // Si estás en .../Vistas/adminPanel.html -> va a .../Vistas/login.html
+            // Si estás en .../Vista/adminPanel.html -> va a .../Vista/login.html (y fallará si la carpeta real es Vistas)
+            
+            // TRUCO: Si la URL actual contiene 'Vista/' (singular) incorrectamente, intentamos corregirla.
+            const currentUrl = window.location.href;
+            if (currentUrl.includes('/Vista/')) {
+                // Forzamos la corrección a Plural si detectamos el error común
+                window.location.href = currentUrl.replace('/Vista/', '/Vistas/').replace('adminPanel.html', 'login.html');
+            } else {
+                // Comportamiento normal
+                window.location.href = '../Vistas/login.html';
+            }
+        };
 
-        onAuthStateChanged(auth, (user) => {
-            if (!user) signInAnonymously(auth).catch(console.error);
-        });
+        let auth = null;
 
-        // --- LOGOUT CORREGIDO ---
+        try {
+            const configParam = new URLSearchParams(window.location.search).get('firebaseConfig');
+            
+            if (configParam) {
+                const firebaseConfig = JSON.parse(configParam);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (!user) signInAnonymously(auth).catch(console.error);
+                });
+            } else {
+                console.warn("Modo sin Firebase: No se encontró configuración en la URL.");
+            }
+        } catch (error) {
+            console.error("Error inicializando Firebase:", error);
+        }
+
+        // 3. Función global de logout
         window.handleLogout = () => {
-            signOut(auth).then(() => {
-                // CORRECCIÓN: Apuntar directamente a login.html (misma carpeta)
-                window.location.href = '../Vistas/login.html';
-            }).catch((error) => {
-                console.error("Error al salir:", error);
-                // Forzar redirección incluso si falla el signOut
-                window.location.href = '../Vistas/login.html';
-            });
+            if (auth) {
+                signOut(auth)
+                    .then(irAlLogin)
+                    .catch((error) => {
+                        console.error("Error en signOut de Firebase:", error);
+                        irAlLogin();
+                    });
+            } else {
+                irAlLogin();
+            }
         };
     </script>
 </body>
