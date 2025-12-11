@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Coach - Concurso de Robótica</title>
+    
+    <!-- Tailwind CSS (Utilidades) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Estilos Personalizados -->
+    <link rel="stylesheet" href="../Diseño/style_coach.css">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-gray-50">
+
+    <!-- Auth Overlay -->
+    <div id="authOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-60 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full animate-slide-up">
+            <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-robot text-3xl text-[#52C5CB]"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">Acceso Coach</h2>
+            <p class="text-gray-500 mb-6 text-sm">Autenticando credenciales...</p>
+            <div class="flex justify-center">
+                <div class="loader"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="gradient-bg text-white shadow-lg z-10 shrink-0">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                    <i class="fa-solid fa-chalkboard-user text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide">PANEL DE COACH</h1>
+                    <p class="text-xs text-white/90 font-medium opacity-80">Gestión de Equipos</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden md:block">
+                    <p class="text-sm font-bold" id="coachName">Cargando...</p>
+                    <p class="text-[10px] text-blue-100 bg-white/20 px-2 py-0.5 rounded-full inline-block">Coach Verificado</p>
+                </div>
+                <button onclick="handleLogout()" class="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors" title="Cerrar Sesión">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL SCROLLABLE -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
+        <div class="container mx-auto max-w-5xl space-y-8">
+
+            <!-- SECCIÓN 1: FORMULARIO DE REGISTRO DE EQUIPO -->
+            <section class="animate-slide-up">
+                <div class="glass-card p-6 md:p-8">
+                    <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#5289CB]">
+                            <i class="fa-solid fa-plus text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-[#2d3748]">1. Registrar Nuevo Equipo</h2>
+                            <p class="text-sm text-gray-500">Inscribe un equipo para un evento activo.</p>
+                        </div>
+                    </div>
+
+                    <form id="registroEquipoForm" onsubmit="handleRegistrarEquipo(event)" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Evento -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-[#5289CB] uppercase tracking-wide ml-1">Evento</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-calendar-check absolute left-3 top-3.5 text-gray-400"></i>
+                                    <select id="eventoSelect" class="input-field pl-10 appearance-none cursor-pointer" required>
+                                        <option value="" disabled selected>Cargando eventos...</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-gray-400 pointer-events-none text-xs"></i>
+                                </div>
+                            </div>
+
+                            <!-- Categoría -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-[#5289CB] uppercase tracking-wide ml-1">Categoría</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-layer-group absolute left-3 top-3.5 text-gray-400"></i>
+                                    <select id="categoriaSelect" class="input-field pl-10 appearance-none cursor-pointer" required>
+                                        <option value="" disabled selected>Seleccione categoría...</option>
+                                        <option value="PRIMARIA">PRIMARIA</option>
+                                        <option value="SECUNDARIA">SECUNDARIA</option>
+                                        <option value="PREPARATORIA">PREPARATORIA</option>
+                                        <option value="UNIVERSIDAD">UNIVERSIDAD</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-gray-400 pointer-events-none text-xs"></i>
+                                </div>
+                            </div>
+
+                            <!-- Nombre Equipo -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-[#5289CB] uppercase tracking-wide ml-1">Nombre del Equipo *</label>
+                                <input type="text" id="nombreEquipo" class="input-field" placeholder="Ej. Robotech Alpha" required>
+                            </div>
+
+                            <!-- Nombre Proyecto -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-[#5289CB] uppercase tracking-wide ml-1">Nombre del Proyecto *</label>
+                                <input type="text" id="nombreProyecto" class="input-field" placeholder="Ej. Brazo Hidráulico V2" required>
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide ml-1">Descripción (Opcional)</label>
+                            <textarea id="descProyecto" class="input-field min-h-[80px]" placeholder="Breve descripción del funcionamiento..."></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full btn-gradient py-3.5 rounded-lg shadow-md flex items-center justify-center gap-2">
+                            <span>REGISTRAR EQUIPO</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 2: GESTIÓN DE INTEGRANTES -->
+            <section id="section-integrantes" class="animate-slide-up hidden opacity-50 pointer-events-none transition-all duration-300">
+                <div class="glass-card p-6 md:p-8 border-l-4 border-l-[#52C5CB]">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-[#2d3748] flex items-center gap-2">
+                                <span>2. Gestión de Integrantes</span>
+                                <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold uppercase" id="badgeSeleccionado">Equipo no seleccionado</span>
+                            </h2>
+                            <p class="text-sm text-gray-500 mt-1" id="equipoSeleccionadoNombre">Selecciona un equipo de la lista inferior para gestionar sus miembros.</p>
+                        </div>
+                        
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-gray-400 uppercase">Cupo</span>
+                            <div class="text-2xl font-bold text-[#5289CB]" id="contadorIntegrantes">0/3</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 mb-6">
+                        <form onsubmit="handleAgregarIntegrante(event)" class="flex flex-col md:flex-row gap-4 items-end">
+                            <div class="flex-1 w-full space-y-1">
+                                <label class="text-xs font-bold text-gray-500 ml-1">Nombre Completo *</label>
+                                <input type="text" id="intNombre" class="input-field bg-white" placeholder="Nombre del alumno" required>
+                            </div>
+                            <div class="w-full md:w-24 space-y-1">
+                                <label class="text-xs font-bold text-gray-500 ml-1">Edad *</label>
+                                <input type="number" id="intEdad" class="input-field bg-white" placeholder="Ej. 15" required min="5" max="99">
+                            </div>
+                            <div class="w-full md:w-24 space-y-1">
+                                <label class="text-xs font-bold text-gray-500 ml-1">Grado *</label>
+                                <input type="number" id="intGrado" class="input-field bg-white" placeholder="Ej. 3" required min="1">
+                            </div>
+                            <button type="submit" id="btnAgregarInt" class="w-full md:w-auto bg-[#27ae60] hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-user-plus"></i>
+                                <span>Agregar</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Lista de Integrantes -->
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-400 uppercase mb-3 ml-1">Miembros Actuales</h4>
+                        <div id="listaIntegrantes" class="space-y-2">
+                            <!-- Items dinámicos -->
+                            <div class="p-4 text-center text-gray-400 text-sm italic bg-white rounded-lg border border-dashed border-gray-300">
+                                No hay integrantes registrados en este equipo.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-center">
+                        <button onclick="limpiarFormulario()" class="text-sm text-[#5289CB] font-bold hover:underline">
+                            <i class="fa-solid fa-rotate-left mr-1"></i> Terminar edición / Limpiar
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 3: MIS EQUIPOS -->
+            <section class="animate-slide-up">
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-700">3. Mis Equipos Registrados</h2>
+                    <span class="text-xs font-medium bg-white px-3 py-1 rounded-full text-gray-500 shadow-sm" id="totalEquiposCount">0 Equipos</span>
+                </div>
+                
+                <div id="contenedorEquipos" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Tarjetas dinámicas -->
+                    <div class="col-span-1 lg:col-span-2 p-12 text-center text-gray-400">
+                        <i class="fa-solid fa-folder-open text-4xl mb-3 opacity-30"></i>
+                        <p>No tienes equipos registrados aún.</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- TOAST NOTIFICACIONES -->
+    <div id="toast" class="toast">
+        <div class="text-xl icon-container"></div>
+        <div>
+            <h4 class="font-bold text-sm text-gray-800" id="toastTitle"></h4>
+            <p class="text-xs text-gray-500" id="toastMessage"></p>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuración Firebase (Recibida del entorno)
+        const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'default-app-id'; // Valor por defecto o dinámico
+
+        let currentCoach = null;
+        let currentTeamId = null;
+        let unsubscribeIntegrantes = null;
+
+        // --- AUTENTICACIÓN ---
+        const initAuth = () => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentCoach = user;
+                    document.getElementById('authOverlay').classList.add('hidden');
+                    
+                    // Simular obtención de datos del usuario
+                    // En una app real, leeríamos el documento del usuario en Firestore
+                    document.getElementById('coachName').innerText = "Coach Usuario"; 
+                    
+                    cargarEventos();
+                    cargarMisEquipos();
+                } else {
+                    document.getElementById('authOverlay').classList.remove('hidden');
+                    // Fallback para demo
+                    signInAnonymously(auth).catch(console.error);
+                }
+            });
+        };
+        initAuth();
+
+        window.handleLogout = () => {
+            signOut(auth).then(() => window.location.reload());
+        };
+
+        // --- 1. CARGAR EVENTOS (Para el Select) ---
+        function cargarEventos() {
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'events'));
+            onSnapshot(q, (snapshot) => {
+                const select = document.getElementById('eventoSelect');
+                select.innerHTML = '<option value="" disabled selected>Seleccione evento...</option>';
+                
+                const events = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if(data.activo !== false) {
+                        events.push({id: doc.id, ...data});
+                    }
+                });
+                
+                // Ordenar por fecha desc
+                events.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+                events.forEach(evt => {
+                    const option = document.createElement('option');
+                    option.value = evt.id; // Guardamos ID
+                    option.text = evt.nombre; // Mostramos Nombre
+                    // Guardamos nombre como atributo para usarlo al crear el equipo
+                    option.setAttribute('data-name', evt.nombre);
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // --- 2. REGISTRAR EQUIPO ---
+        window.handleRegistrarEquipo = async (e) => {
+            e.preventDefault();
+            if(!currentCoach) return;
+
+            const nombreEquipo = document.getElementById('nombreEquipo').value.trim();
+            const nombreProyecto = document.getElementById('nombreProyecto').value.trim();
+            const categoria = document.getElementById('categoriaSelect').value;
+            const eventoSelect = document.getElementById('eventoSelect');
+            const eventoId = eventoSelect.value;
+            const eventoNombre = eventoSelect.options[eventoSelect.selectedIndex].getAttribute('data-name');
+            const descripcion = document.getElementById('descProyecto').value.trim();
+
+            if(!eventoId || !categoria) {
+                mostrarToast("Error", "Seleccione evento y categoría", "error");
+                return;
+            }
+
+            // Crear documento de equipo
+            try {
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<div class="loader mx-auto"></div>';
+
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'teams'), {
+                    coachId: currentCoach.uid,
+                    nombreEquipo: nombreEquipo,
+                    nombreProyecto: nombreProyecto,
+                    categoria: categoria,
+                    eventoId: eventoId,
+                    eventoNombre: eventoNombre,
+                    descripcion: descripcion,
+                    estado: 'PENDIENTE', // PENDIENTE, EVALUADO
+                    activo: true,
+                    createdAt: new Date().toISOString()
+                });
+
+                mostrarToast("Éxito", "Equipo registrado correctamente", "success");
+                e.target.reset();
+                
+            } catch (error) {
+                console.error(error);
+                mostrarToast("Error", "No se pudo registrar el equipo", "error");
+            } finally {
+                const btn = e.target.querySelector('button[type="submit"]');
+                btn.disabled = false;
+                btn.innerHTML = `<span>REGISTRAR EQUIPO</span><i class="fa-solid fa-arrow-right"></i>`;
+            }
+        };
+
+        // --- 3. CARGAR MIS EQUIPOS ---
+        function cargarMisEquipos() {
+            if(!currentCoach) return;
+
+            // Query simple sin orderBy complejo para evitar errores de índice en Firestore modo estricto
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'teams'));
+
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('contenedorEquipos');
+                container.innerHTML = '';
+                
+                const teams = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Filtro en cliente
+                    if(data.coachId === currentCoach.uid && data.activo !== false) {
+                        teams.push({id: doc.id, ...data});
+                    }
+                });
+
+                // Ordenar en cliente
+                teams.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                document.getElementById('totalEquiposCount').innerText = `${teams.length} Equipos`;
+
+                if(teams.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-1 lg:col-span-2 p-12 text-center text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
+                            <i class="fa-solid fa-folder-open text-4xl mb-3 opacity-30"></i>
+                            <p>No tienes equipos registrados aún.</p>
+                        </div>`;
+                    return;
+                }
+
+                teams.forEach(team => {
+                    const card = document.createElement('div');
+                    card.className = `team-card p-6 flex flex-col justify-between ${currentTeamId === team.id ? 'selected' : ''}`;
+                    card.onclick = () => seleccionarEquipo(team);
+                    
+                    const estadoClass = team.estado === 'EVALUADO' ? 'status-evaluado' : 'status-pendiente';
+                    const estadoIcon = team.estado === 'EVALUADO' ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-regular fa-clock"></i>';
+
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">${team.categoria}</span>
+                                <span class="status-badge ${estadoClass}">${estadoIcon} ${team.estado}</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800 leading-tight mb-1">${team.nombreEquipo}</h3>
+                            <p class="text-sm text-[#5289CB] font-medium mb-4"><i class="fa-solid fa-microchip mr-1"></i> ${team.nombreProyecto}</p>
+                            
+                            <div class="text-xs text-gray-500 space-y-1 mb-4">
+                                <p><i class="fa-solid fa-trophy w-4 text-center"></i> ${team.eventoNombre || 'Evento desconocido'}</p>
+                                <p class="line-clamp-2"><i class="fa-regular fa-file-lines w-4 text-center"></i> ${team.descripcion || 'Sin descripción'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
+                            <span class="text-xs font-bold text-gray-400" id="count-${team.id}">Cargando miembros...</span>
+                            <button class="text-sm font-bold text-[#52C5CB] hover:text-[#5852CB] transition-colors">
+                                ${currentTeamId === team.id ? 'Gestionando <i class="fa-solid fa-pen"></i>' : 'Gestionar <i class="fa-solid fa-chevron-right"></i>'}
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                    
+                    // Cargar conteo individual (sin listener en tiempo real para ahorrar recursos, solo snapshot one-time o listener ligero)
+                    // Para simplificar en esta vista, lo haremos cuando se seleccione, pero aquí ponemos un placeholder o hacemos un query separado
+                    cargarConteoIntegrantes(team.id);
+                });
+            });
+        }
+
+        function cargarConteoIntegrantes(teamId) {
+            // Un listener ligero solo para el conteo en la tarjeta
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'members'));
+            onSnapshot(q, (snap) => {
+                const count = snap.docs.filter(d => d.data().teamId === teamId).length;
+                const el = document.getElementById(`count-${teamId}`);
+                if(el) el.innerText = `${count}/3 Miembros`;
+            });
+        }
+
+        // --- 4. SELECCIONAR EQUIPO Y GESTIONAR INTEGRANTES ---
+        window.seleccionarEquipo = (team) => {
+            currentTeamId = team.id;
+            
+            // UI Updates
+            document.querySelectorAll('.team-card').forEach(c => c.classList.remove('selected'));
+            // Re-renderizado rápido para aplicar clase selected sin recargar todo (idealmente se hace por DOM manipulation directa)
+            // Aquí simplificamos dejando que el onSnapshot principal actualice el estilo si cambia algo, pero para feedback inmediato:
+            // (Omitido para no complicar, el usuario verá el cambio visual al instante si manipulamos clases)
+            
+            // Activar sección
+            const section = document.getElementById('section-integrantes');
+            section.classList.remove('hidden', 'opacity-50', 'pointer-events-none');
+            
+            // Scroll suave
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Datos cabecera
+            document.getElementById('badgeSeleccionado').className = "text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-bold uppercase";
+            document.getElementById('badgeSeleccionado').innerText = "Editando";
+            document.getElementById('equipoSeleccionadoNombre').innerHTML = `Gestionando: <span class="font-bold text-gray-800">${team.nombreEquipo}</span> (${team.categoria})`;
+
+            // Cargar integrantes
+            cargarIntegrantes(team.id);
+        };
+
+        function cargarIntegrantes(teamId) {
+            if(unsubscribeIntegrantes) unsubscribeIntegrantes();
+
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'members'));
+            
+            unsubscribeIntegrantes = onSnapshot(q, (snapshot) => {
+                const lista = document.getElementById('listaIntegrantes');
+                lista.innerHTML = '';
+                
+                const members = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if(data.teamId === teamId) members.push({id: doc.id, ...data});
+                });
+
+                // Actualizar contador
+                const count = members.length;
+                const counterEl = document.getElementById('contadorIntegrantes');
+                counterEl.innerText = `${count}/3`;
+                counterEl.className = `text-2xl font-bold ${count === 3 ? 'text-green-500' : 'text-[#5289CB]'}`;
+
+                // Bloquear formulario si está lleno
+                const btnAdd = document.getElementById('btnAgregarInt');
+                const inputs = document.querySelectorAll('#section-integrantes input');
+                if(count >= 3) {
+                    btnAdd.disabled = true;
+                    btnAdd.classList.add('opacity-50', 'cursor-not-allowed');
+                    btnAdd.innerHTML = `<i class="fa-solid fa-check"></i><span>Completo</span>`;
+                    inputs.forEach(i => i.disabled = true);
+                } else {
+                    btnAdd.disabled = false;
+                    btnAdd.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btnAdd.innerHTML = `<i class="fa-solid fa-user-plus"></i><span>Agregar</span>`;
+                    inputs.forEach(i => i.disabled = false);
+                }
+
+                if(members.length === 0) {
+                    lista.innerHTML = `<div class="p-4 text-center text-gray-400 text-sm italic bg-white rounded-lg border border-dashed border-gray-300">No hay integrantes registrados.</div>`;
+                    return;
+                }
+
+                members.forEach(m => {
+                    const item = document.createElement('div');
+                    item.className = "flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm";
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-xs">
+                                ${m.grado}°
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800">${m.nombre}</p>
+                                <p class="text-xs text-gray-500">${m.edad} años</p>
+                            </div>
+                        </div>
+                        <button onclick="eliminarIntegrante('${m.id}')" class="text-red-400 hover:text-red-600 p-2 transition-colors" title="Eliminar">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    `;
+                    lista.appendChild(item);
+                });
+            });
+        }
+
+        window.handleAgregarIntegrante = async (e) => {
+            e.preventDefault();
+            if(!currentTeamId) return;
+
+            const nombre = document.getElementById('intNombre').value.trim();
+            const edad = document.getElementById('intEdad').value;
+            const grado = document.getElementById('intGrado').value;
+
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'members'), {
+                    teamId: currentTeamId,
+                    nombre: nombre,
+                    edad: parseInt(edad),
+                    grado: parseInt(grado),
+                    createdAt: new Date().toISOString()
+                });
+                
+                mostrarToast("Éxito", "Integrante agregado", "success");
+                e.target.reset();
+                document.getElementById('intNombre').focus();
+            } catch(error) {
+                mostrarToast("Error", error.message, "error");
+            }
+        };
+
+        window.eliminarIntegrante = async (id) => {
+            if(!confirm("¿Eliminar integrante?")) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'members', id));
+                mostrarToast("Eliminado", "Integrante eliminado correctamente", "success");
+            } catch(e) {
+                mostrarToast("Error", e.message, "error");
+            }
+        };
+
+        window.limpiarFormulario = () => {
+            currentTeamId = null;
+            document.getElementById('section-integrantes').classList.add('hidden', 'opacity-50', 'pointer-events-none');
+            document.querySelectorAll('.team-card').forEach(c => c.classList.remove('selected'));
+            if(unsubscribeIntegrantes) unsubscribeIntegrantes();
+        };
+
+        // --- UTILIDADES ---
+        const mostrarToast = (title, message, type) => {
+            const toast = document.getElementById('toast');
+            const tTitle = document.getElementById('toastTitle');
+            const tMsg = document.getElementById('toastMessage');
+            const iconContainer = toast.querySelector('.icon-container');
+
+            tTitle.innerText = title;
+            tMsg.innerText = message;
+
+            toast.classList.remove('toast-success', 'toast-error');
+            if(type === 'success') {
+                toast.classList.add('toast-success');
+                iconContainer.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i>';
+            } else {
+                toast.classList.add('toast-error');
+                iconContainer.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+            }
+
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        };
+    </script>
+</body>
+</html>

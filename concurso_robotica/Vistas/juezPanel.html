@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Juez - Evaluación de Robótica</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../Diseño/style_juez.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Auth Overlay -->
+    <div id="authOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full animate-slide">
+            <div class="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-gavel text-3xl text-[#5852CB]"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">Acceso Juez</h2>
+            <p class="text-gray-500 mb-6 text-sm">Verificando permisos de evaluación...</p>
+            <div class="flex justify-center"><div class="loader"></div></div>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="gradient-header text-white shadow-md z-10 shrink-0">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2 rounded-lg">
+                    <i class="fa-solid fa-scale-balanced text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide">PANEL DE EVALUACIÓN</h1>
+                    <p class="text-xs text-white/80 font-medium">Concurso de Robótica</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-bold" id="judgeName">Juez</p>
+                    <p class="text-[10px] bg-green-500/20 px-2 rounded-full inline-block">Autorizado</p>
+                </div>
+                <button onclick="handleLogout()" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors" title="Salir">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- SIDEBAR (Lista de Proyectos) -->
+        <aside class="w-80 bg-white border-r border-gray-200 flex flex-col shrink-0 z-0">
+            <div class="p-4 border-b border-gray-100">
+                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">Filtrar por Categoría</label>
+                <select id="categoryFilter" onchange="loadProjects()" class="w-full border-gray-300 border rounded-lg p-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-[#5852CB] outline-none">
+                    <option value="ALL">Todas las Categorías</option>
+                    <option value="PRIMARIA">PRIMARIA</option>
+                    <option value="SECUNDARIA">SECUNDARIA</option>
+                    <option value="PREPARATORIA">PREPARATORIA</option>
+                    <option value="UNIVERSIDAD">UNIVERSIDAD</option>
+                </select>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-3" id="projectList">
+                <!-- Project Cards Injected Here -->
+                <div class="text-center py-10 text-gray-400">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                    <p class="text-sm">Cargando proyectos...</p>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-gray-50 border-t border-gray-200 text-xs text-center text-gray-500">
+                <span id="projectCount">0</span> proyectos disponibles
+            </div>
+        </aside>
+
+        <!-- EVALUATION AREA -->
+        <main class="flex-1 overflow-y-auto bg-[#f0f4f8] p-4 md:p-8 relative">
+            
+            <!-- Estado Inicial (Sin selección) -->
+            <div id="emptyState" class="flex flex-col items-center justify-center h-full text-gray-400 animate-fade">
+                <i class="fa-solid fa-clipboard-check text-6xl mb-4 opacity-20"></i>
+                <h3 class="text-xl font-bold text-gray-600">Selecciona un Proyecto</h3>
+                <p class="text-sm">Elige un equipo del menú lateral para comenzar la evaluación.</p>
+            </div>
+
+            <!-- Panel de Evaluación -->
+            <div id="evaluationPanel" class="hidden max-w-4xl mx-auto space-y-6 animate-slide">
+                
+                <!-- Header del Proyecto -->
+                <div class="card p-6 border-l-4 border-l-[#5852CB]">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="badge bg-blue-100 text-blue-700" id="evalCategory">CATEGORÍA</span>
+                                <span class="text-xs text-gray-500 font-mono" id="evalId">#ID</span>
+                            </div>
+                            <h2 class="text-2xl font-bold text-gray-800 leading-tight mb-1" id="evalTeamName">Nombre del Equipo</h2>
+                            <p class="text-[#5289CB] font-medium text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-microchip"></i> <span id="evalProjectName">Nombre del Proyecto</span>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Puntuación Actual</div>
+                            <div class="score-circle mx-auto" id="currentScore">0</div>
+                            <p class="text-xs text-gray-500 mt-1 font-medium" id="scoreLabel">DEFICIENTE</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-400 text-xs uppercase font-bold">Evento</span>
+                            <p class="font-medium text-gray-700" id="evalEvent">Torneo Nacional</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 text-xs uppercase font-bold">Descripción</span>
+                            <p class="text-gray-600 italic truncate" id="evalDesc">Sin descripción...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rúbrica de Evaluación -->
+                <form id="rubricForm" class="space-y-6">
+                    
+                    <!-- Sección 1: Diseño -->
+                    <div class="card p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                <i class="fa-solid fa-pen-ruler"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800">1. Diseño y Documentación</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Bitácora: Registro de Fechas</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Justificación de Cambios</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Diagramas e Imágenes</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Ortografía y Redacción</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Diseño CAD / Inventor</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Análisis de Elementos</span></label>
+                        </div>
+                    </div>
+
+                    <!-- Sección 2: Programación -->
+                    <div class="card p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                <i class="fa-solid fa-code"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800">2. Programación y Control</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Uso de Funciones/Módulos</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Complejidad Lógica</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Comentarios en Código</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Rutina Autónoma (15s)</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Uso de Sensores</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Control Driver Eficiente</span></label>
+                        </div>
+                    </div>
+
+                    <!-- Sección 3: Construcción -->
+                    <div class="card p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                <i class="fa-solid fa-screwdriver-wrench"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800">3. Construcción e Ingeniería</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Estructura Estable</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Gestión de Cables</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Centro de Gravedad</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Sistemas de Transmisión</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Mecanismos Móviles</span></label>
+                            <label class="rubric-item"><input type="checkbox" class="mr-3 w-4 h-4 text-[#5852CB] rounded focus:ring-0" onchange="calculateScore()"> <span>Estética General</span></label>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex justify-end gap-4 pt-4 pb-10">
+                        <button type="button" onclick="resetEvaluation()" class="px-6 py-3 rounded-lg border border-gray-300 text-gray-600 font-bold hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                        <button type="button" onclick="submitEvaluation()" id="btnSubmit" class="px-8 py-3 rounded-lg bg-gradient-to-r from-[#27ae60] to-[#2ecc71] text-white font-bold shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5 flex items-center gap-2">
+                            <i class="fa-solid fa-check-circle"></i> Guardar Evaluación
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div id="toastIcon" class="text-xl"></div>
+        <div>
+            <h4 class="font-bold text-sm" id="toastTitle"></h4>
+            <p class="text-xs text-gray-500" id="toastMessage"></p>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuración (inyectada por entorno)
+        const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'default-app-id';
+
+        let currentJudge = null;
+        let selectedProject = null;
+        let unsubscribeProjects = null;
+
+        // --- AUTH ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentJudge = user;
+                document.getElementById('authOverlay').classList.add('hidden');
+                document.getElementById('judgeName').innerText = "Juez Asignado";
+                loadProjects();
+            } else {
+                document.getElementById('authOverlay').classList.remove('hidden');
+                signInAnonymously(auth).catch(console.error);
+            }
+        });
+
+        window.handleLogout = () => signOut(auth).then(() => location.reload());
+
+        // --- CARGAR PROYECTOS ---
+        window.loadProjects = () => {
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const listContainer = document.getElementById('projectList');
+            
+            if (unsubscribeProjects) unsubscribeProjects();
+
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'teams'));
+
+            unsubscribeProjects = onSnapshot(q, (snapshot) => {
+                listContainer.innerHTML = '';
+                const projects = [];
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Filtros: Activo + Categoría (si aplica)
+                    if (data.activo !== false) {
+                        if (categoryFilter === 'ALL' || data.categoria === categoryFilter) {
+                            projects.push({ id: doc.id, ...data });
+                        }
+                    }
+                });
+
+                // Ordenar: PENDIENTES primero, luego EVALUADOS
+                projects.sort((a, b) => {
+                    if (a.estado === b.estado) return a.nombreEquipo.localeCompare(b.nombreEquipo);
+                    return a.estado === 'PENDIENTE' ? -1 : 1;
+                });
+
+                document.getElementById('projectCount').innerText = projects.length;
+
+                if (projects.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fa-solid fa-inbox text-3xl mb-2 opacity-30"></i>
+                            <p class="text-xs">No hay proyectos en esta categoría.</p>
+                        </div>`;
+                    return;
+                }
+
+                projects.forEach(p => {
+                    const card = document.createElement('div');
+                    const isSelected = selectedProject && selectedProject.id === p.id;
+                    const isEvaluated = p.estado === 'EVALUADO';
+                    
+                    card.className = `p-3 rounded-lg border cursor-pointer transition-all ${
+                        isSelected 
+                            ? 'bg-blue-50 border-[#5852CB] shadow-sm' 
+                            : 'bg-white border-gray-200 hover:border-blue-300'
+                    }`;
+                    
+                    card.onclick = () => selectProject(p);
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">${p.categoria}</span>
+                            ${isEvaluated 
+                                ? '<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-check"></i> OK</span>' 
+                                : '<span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">PEND</span>'
+                            }
+                        </div>
+                        <h4 class="font-bold text-gray-800 text-sm leading-tight mb-0.5">${p.nombreEquipo}</h4>
+                        <p class="text-xs text-gray-500 truncate">${p.nombreProyecto}</p>
+                    `;
+                    listContainer.appendChild(card);
+                });
+            });
+        };
+
+        // --- SELECCIONAR PROYECTO ---
+        window.selectProject = (project) => {
+            selectedProject = project;
+            
+            // Actualizar UI Lista
+            loadProjects(); // Refrescar estilos selección
+
+            // Mostrar Panel
+            document.getElementById('emptyState').classList.add('hidden');
+            const panel = document.getElementById('evaluationPanel');
+            panel.classList.remove('hidden');
+            
+            // Scroll arriba en móvil
+            if(window.innerWidth < 768) {
+                panel.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            // Llenar Datos
+            document.getElementById('evalCategory').innerText = project.categoria;
+            document.getElementById('evalId').innerText = `#${project.id.substring(0, 6)}`;
+            document.getElementById('evalTeamName').innerText = project.nombreEquipo;
+            document.getElementById('evalProjectName').innerText = project.nombreProyecto;
+            document.getElementById('evalEvent').innerText = project.eventoNombre || 'Evento General';
+            document.getElementById('evalDesc').innerText = project.descripcion || 'Sin descripción disponible.';
+
+            // Resetear o Cargar Evaluación Previa
+            const form = document.getElementById('rubricForm');
+            const btn = document.getElementById('btnSubmit');
+            const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+
+            if (project.estado === 'EVALUADO') {
+                // Modo Lectura (Simulado para no complicar con otra colección ahora)
+                // En app real: leer colección 'evaluations'
+                checkboxes.forEach(cb => { cb.checked = true; cb.disabled = true; }); // Simulación visual
+                calculateScore();
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-lock"></i> Proyecto Ya Evaluado';
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                // Modo Edición
+                checkboxes.forEach(cb => { cb.checked = false; cb.disabled = false; });
+                calculateScore();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Guardar Evaluación';
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        };
+
+        // --- CALCULADORA DE PUNTAJE ---
+        window.calculateScore = () => {
+            const checkboxes = document.querySelectorAll('#rubricForm input[type="checkbox"]');
+            const totalItems = checkboxes.length;
+            const checkedItems = Array.from(checkboxes).filter(cb => cb.checked).length;
+            
+            // Estilo visual del item seleccionado
+            checkboxes.forEach(cb => {
+                const parent = cb.parentElement;
+                if(cb.checked) parent.classList.add('checked');
+                else parent.classList.remove('checked');
+            });
+
+            // Cálculo (Regla de 3 simple a escala 10)
+            // Total items = 18 (6x3 secciones)
+            let score = 0;
+            if (totalItems > 0) {
+                // Si cumple >95% es 10, etc. (Lógica JavaFX portada)
+                const percentage = (checkedItems / totalItems) * 100;
+                
+                if (percentage >= 95) score = 10;
+                else if (percentage >= 80) score = 8;
+                else if (percentage >= 60) score = 6;
+                else if (percentage >= 40) score = 4;
+                else score = 2; // Mínimo por participar
+            }
+
+            // Actualizar UI Score
+            const scoreEl = document.getElementById('currentScore');
+            const labelEl = document.getElementById('scoreLabel');
+            
+            scoreEl.innerText = score;
+            
+            // Colores y Texto
+            let color = '', text = '';
+            if(score >= 9) { color = '#48bb78'; text = 'EXCELENTE'; }
+            else if(score >= 7) { color = '#3182ce'; text = 'MUY BUENO'; }
+            else if(score >= 5) { color = '#ed8936'; text = 'REGULAR'; }
+            else { color = '#e53e3e'; text = 'DEFICIENTE'; }
+
+            scoreEl.style.background = score >= 5 
+                ? 'linear-gradient(135deg, #52C5CB, #5852CB)' 
+                : 'linear-gradient(135deg, #fc8181, #e53e3e)';
+            
+            labelEl.innerText = text;
+            labelEl.style.color = color;
+        };
+
+        // --- GUARDAR EVALUACIÓN ---
+        window.submitEvaluation = async () => {
+            if (!selectedProject || !currentJudge) return;
+            if (!confirm(`¿Confirmar calificación de ${document.getElementById('currentScore').innerText}/10 para este equipo?`)) return;
+
+            const score = parseInt(document.getElementById('currentScore').innerText);
+            const btn = document.getElementById('btnSubmit');
+            
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...';
+
+                // 1. Guardar documento de evaluación
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'evaluations'), {
+                    teamId: selectedProject.id,
+                    judgeId: currentJudge.uid,
+                    teamName: selectedProject.nombreEquipo,
+                    score: score,
+                    category: selectedProject.categoria,
+                    timestamp: serverTimestamp()
+                });
+
+                // 2. Actualizar estado del equipo
+                const teamRef = doc(db, 'artifacts', appId, 'public', 'data', 'teams', selectedProject.id);
+                await updateDoc(teamRef, { 
+                    estado: 'EVALUADO',
+                    scoreFinal: score // Opcional, para mostrar rápido
+                });
+
+                showToast('Evaluación Guardada', 'El proyecto ha sido calificado exitosamente.', 'success');
+                resetEvaluation();
+
+            } catch (error) {
+                console.error(error);
+                showToast('Error', 'No se pudo guardar la evaluación.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Guardar Evaluación';
+            }
+        };
+
+        window.resetEvaluation = () => {
+            selectedProject = null;
+            document.getElementById('evaluationPanel').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+            loadProjects(); // Refrescar lista para ver el cambio de estado
+        };
+
+        // --- UTILIDADES ---
+        const showToast = (title, msg, type) => {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastTitle').innerText = title;
+            document.getElementById('toastMessage').innerText = msg;
+            
+            const icon = document.getElementById('toastIcon');
+            toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
+            
+            if(type === 'success') {
+                icon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i>';
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+            }
+
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        };
+    </script>
+</body>
+</html>
