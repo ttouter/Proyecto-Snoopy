@@ -5,100 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - Gestión de Torneo</title>
     
-    <!-- 1. LIBRERÍAS EXTERNAS (Tailwind + Iconos) -->
+    <!-- Librerías -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- 2. ESTILOS CSS (Separado del HTML visualmente) -->
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+
     <style>
-        /* --- CONFIGURACIÓN BASE --- */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa;
-            color: #2d3748;
-        }
-
-        /* --- SCROLLBAR PERSONALIZADA --- */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-
-        /* --- GRADIENTES Y COLORES (Basados en tu JavaFX) --- */
-        .gradient-header {
-            background: linear-gradient(to right, #52C5CB, #5852CB);
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #2d3748; }
+        .gradient-header { background: linear-gradient(to right, #52C5CB, #5852CB); }
         
-        .gradient-text {
-            background: linear-gradient(to right, #52C5CB, #5852CB);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* --- BOTONES --- */
-        .btn-gradient {
-            background: linear-gradient(to right, #5289CB, #5852CB);
-            transition: all 0.2s;
-            color: white;
-        }
-        .btn-gradient:hover {
-            opacity: 0.95;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        /* --- PANELES Y TARJETAS --- */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        /* --- ANIMACIONES --- */
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-        .animate-fade-in { 
-            animation: fadeIn 0.4s ease-out forwards; 
-        }
-
-        /* --- UTILIDADES --- */
+        .nav-item { transition: all 0.2s; }
+        .nav-item:hover { background-color: #f3f4f6; color: #5289CB; }
+        
         .loader {
-            border: 3px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 3px solid #52C5CB;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
+            border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #52C5CB;
+            width: 20px; height: 20px; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Toast Notification */
-        .toast {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            background: white;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid;
-            transform: translateX(150%);
-            transition: transform 0.3s ease-out;
-            z-index: 50;
-        }
-        .toast.show { transform: translateX(0); }
-        .toast-success { border-color: #22c55e; }
-        .toast-error { border-color: #ef4444; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- 3. ESTRUCTURA HTML -->
-    
     <!-- HEADER -->
     <header class="gradient-header text-white shadow-lg z-20 shrink-0">
         <div class="container mx-auto px-6 py-3 flex justify-between items-center">
@@ -119,6 +53,7 @@
                         <i class="fa-solid fa-circle text-[6px] mr-1 align-middle"></i>Sesión Activa
                     </p>
                 </div>
+                <!-- BOTÓN CERRAR SESIÓN -->
                 <button onclick="handleLogout()" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors" title="Cerrar Sesión">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
@@ -128,20 +63,25 @@
 
     <div class="flex flex-1 overflow-hidden relative">
         
-        <!-- SIDEBAR DE NAVEGACIÓN -->
+        <!-- SIDEBAR -->
         <aside class="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex z-10">
             <div class="p-6">
                 <p class="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider">Menú Principal</p>
                 <nav class="space-y-2">
-                    <button onclick="showSection('dashboard')" id="nav-dashboard" class="nav-item w-full text-left px-4 py-3 rounded-xl bg-gray-50 text-[#5289CB] font-bold border-l-4 border-[#5289CB] shadow-sm flex items-center gap-3 transition-all">
+                    <!-- Botón Dashboard (Actual) -->
+                    <button onclick="window.location.reload()" class="w-full text-left px-4 py-3 rounded-xl bg-gray-50 text-[#5289CB] font-bold border-l-4 border-[#5289CB] shadow-sm flex items-center gap-3">
                         <i class="fa-solid fa-chart-pie w-5 text-center"></i> Dashboard
                     </button>
-                    <button onclick="showSection('eventos')" id="nav-eventos" class="nav-item w-full text-left px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-700 flex items-center gap-3 transition-all">
+                    
+                    <!-- ENLACE DIRECTO A GESTIÓN EVENTOS -->
+                    <a href="gestionEvento.html" class="nav-item w-full text-left px-4 py-3 rounded-xl text-gray-500 flex items-center gap-3">
                         <i class="fa-solid fa-calendar-check w-5 text-center"></i> Gestionar Eventos
-                    </button>
-                    <button onclick="showSection('promocion')" id="nav-promocion" class="nav-item w-full text-left px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-700 flex items-center gap-3 transition-all">
+                    </a>
+                    
+                    <!-- ENLACE DIRECTO A PROMOVER JUEZ -->
+                    <a href="promoverJuez.html" class="nav-item w-full text-left px-4 py-3 rounded-xl text-gray-500 flex items-center gap-3">
                         <i class="fa-solid fa-user-graduate w-5 text-center"></i> Promover Juez
-                    </button>
+                    </a>
                 </nav>
             </div>
             
@@ -153,16 +93,13 @@
             </div>
         </aside>
 
-        <!-- CONTENIDO PRINCIPAL -->
-        <main class="flex-1 overflow-y-auto bg-[#f8f9fa] p-4 md:p-8 relative">
-            
-            <!-- OVERLAY DE CARGA -->
+        <!-- CONTENIDO -->
+        <main class="flex-1 overflow-y-auto bg-[#f8f9fa] p-8 relative">
             <div id="loaderOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
                 <div class="loader"></div>
             </div>
 
-            <!-- SECCIÓN: DASHBOARD (Resumen) -->
-            <section id="section-dashboard" class="animate-fade-in space-y-6">
+            <section class="animate-fade-in space-y-6">
                 <div class="flex justify-between items-end">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800">Bienvenido al Sistema</h2>
@@ -171,414 +108,65 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Card Acceso Rápido Eventos -->
-                    <div onclick="showSection('eventos')" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all group">
+                    <!-- Card: GESTIÓN DE EVENTOS -->
+                    <a href="gestionEvento.html" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group hover:border-[#52C5CB]">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-[#5289CB] text-xl group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-trophy"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-gray-800">Gestionar Eventos</h3>
+                                <h3 class="font-bold text-gray-800 group-hover:text-[#5289CB]">Gestionar Eventos</h3>
                                 <p class="text-xs text-gray-500">Crear o eliminar competencias</p>
                             </div>
+                            <div class="ml-auto text-gray-300 group-hover:text-[#5289CB]">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <!-- Card Acceso Rápido Promoción -->
-                    <div onclick="showSection('promocion')" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all group">
+                    <!-- Card: PROMOVER JUECES -->
+                    <a href="promoverJuez.html" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group hover:border-[#5852CB]">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-[#5852CB] text-xl group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-users-gear"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-gray-800">Promover Jueces</h3>
+                                <h3 class="font-bold text-gray-800 group-hover:text-[#5852CB]">Promover Jueces</h3>
                                 <p class="text-xs text-gray-500">Asignar roles a Coaches</p>
                             </div>
+                            <div class="ml-auto text-gray-300 group-hover:text-[#5852CB]">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
             </section>
-
-            <!-- SECCIÓN: GESTIONAR EVENTOS -->
-            <section id="section-eventos" class="hidden animate-fade-in space-y-6">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-day text-[#5289CB]"></i> Gestión de Eventos
-                        </h2>
-                        <p class="text-sm text-gray-500">Cree nuevos torneos o administre los existentes.</p>
-                    </div>
-                    <button onclick="toggleModal('modalCrearEvento')" class="btn-gradient px-6 py-2.5 rounded-lg shadow-md font-bold text-sm flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Nuevo Evento
-                    </button>
-                </div>
-
-                <!-- Lista de Eventos -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                        <h3 class="font-bold text-gray-700">Eventos Activos</h3>
-                        <span id="eventCount" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold">0</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-gray-500 uppercase bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3">Nombre del Evento</th>
-                                    <th class="px-6 py-3">Fecha</th>
-                                    <th class="px-6 py-3">Lugar</th>
-                                    <th class="px-6 py-3 text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaEventos" class="divide-y divide-gray-200">
-                                <!-- Se llena dinámicamente -->
-                                <tr>
-                                    <td colspan="4" class="px-6 py-8 text-center text-gray-400">
-                                        <div class="flex flex-col items-center gap-2">
-                                            <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
-                                            <span>Cargando eventos...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- SECCIÓN: PROMOVER JUEZ -->
-            <section id="section-promocion" class="hidden animate-fade-in space-y-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fa-solid fa-user-shield text-[#5852CB]"></i> Promoción de Personal
-                    </h2>
-                    <p class="text-sm text-gray-500">Otorgue permisos de Juez a Coaches existentes (Rol Híbrido).</p>
-                </div>
-
-                <!-- Info Box -->
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg flex items-start gap-3">
-                    <i class="fa-solid fa-triangle-exclamation text-yellow-500 mt-1"></i>
-                    <div class="text-sm text-yellow-800">
-                        <p class="font-bold">¿Qué implica la promoción?</p>
-                        <p>El usuario pasará al rol <strong>"COACH_JUEZ"</strong>. Mantendrá sus equipos actuales pero podrá acceder al panel de evaluación. <br>Esto no elimina su cuenta, solo actualiza sus permisos.</p>
-                    </div>
-                </div>
-
-                <!-- Tabla de Coaches -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 bg-gray-50/50">
-                        <h3 class="font-bold text-gray-700">Coaches Disponibles para Promoción</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-gray-500 uppercase bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3">Nombre Completo</th>
-                                    <th class="px-6 py-3">Correo Electrónico</th>
-                                    <th class="px-6 py-3">Institución</th>
-                                    <th class="px-6 py-3 text-center">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaCoaches" class="divide-y divide-gray-200">
-                                <tr>
-                                    <td colspan="4" class="px-6 py-8 text-center text-gray-400">
-                                        Cargando usuarios...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
         </main>
     </div>
 
-    <!-- MODAL: CREAR EVENTO -->
-    <div id="modalCrearEvento" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity opacity-0 pointer-events-none">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform scale-95 transition-transform">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-gray-800">Crear Nuevo Evento</h3>
-                <button onclick="toggleModal('modalCrearEvento')" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            
-            <form onsubmit="handleCrearEvento(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">NOMBRE DEL EVENTO</label>
-                    <input type="text" id="nombreEvento" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#52C5CB] outline-none" placeholder="Ej. Torneo Nacional 2025" required>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">FECHA</label>
-                    <input type="date" id="fechaEvento" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#52C5CB] outline-none" required>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">LUGAR</label>
-                    <input type="text" id="lugarEvento" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#52C5CB] outline-none" placeholder="Ej. Auditorio Principal" required>
-                </div>
-                
-                <div class="pt-4 flex gap-3">
-                    <button type="button" onclick="toggleModal('modalCrearEvento')" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 font-bold hover:bg-gray-50">Cancelar</button>
-                    <button type="submit" class="flex-1 btn-gradient px-4 py-2 rounded-lg font-bold shadow-md">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- TOAST NOTIFICATION -->
-    <div id="toast" class="toast">
-        <div id="toastIcon" class="text-xl"></div>
-        <div>
-            <h4 class="font-bold text-sm" id="toastTitle"></h4>
-            <p class="text-xs text-gray-500" id="toastMessage"></p>
-        </div>
-    </div>
-
-    <!-- 4. LÓGICA JAVASCRIPT (Firebase) -->
+    <!-- LÓGICA JAVASCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CONFIGURACIÓN ---
         const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = 'default-app-id'; // O obtener dinámicamente
 
-        let currentUser = null;
+        onAuthStateChanged(auth, (user) => {
+            if (!user) signInAnonymously(auth).catch(console.error);
+        });
 
-        // --- AUTENTICACIÓN ---
-        const initAuth = () => {
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUser = user;
-                    // En app real, verificaríamos si el usuario es ADMIN en Firestore
-                    initApp();
-                } else {
-                    signInAnonymously(auth).catch(console.error);
-                }
-            });
-        };
-
-        const initApp = () => {
-            // Cargar datos en tiempo real
-            cargarEventos();
-            cargarCoaches();
-        };
-
-        // --- GESTIÓN DE EVENTOS ---
-        
-        // 1. Cargar Eventos (Read)
-        function cargarEventos() {
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'events'));
-            
-            onSnapshot(q, (snapshot) => {
-                const tbody = document.getElementById('tablaEventos');
-                tbody.innerHTML = '';
-                
-                const eventos = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if(data.activo !== false) { // Solo mostrar activos (Soft Delete)
-                        eventos.push({id: doc.id, ...data});
-                    }
-                });
-
-                // Ordenar por fecha más reciente
-                eventos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-                document.getElementById('eventCount').innerText = eventos.length;
-
-                if (eventos.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-400 italic">No hay eventos activos.</td></tr>`;
-                    return;
-                }
-
-                eventos.forEach(evt => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-gray-50 transition-colors";
-                    tr.innerHTML = `
-                        <td class="px-6 py-4 font-medium text-gray-800">${evt.nombre}</td>
-                        <td class="px-6 py-4 text-gray-500">${formatearFecha(evt.fecha)}</td>
-                        <td class="px-6 py-4 text-gray-500">${evt.lugar}</td>
-                        <td class="px-6 py-4 text-center">
-                            <button onclick="window.eliminarEvento('${evt.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-all" title="Eliminar Evento">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            });
-        }
-
-        // 2. Crear Evento (Create)
-        window.handleCrearEvento = async (e) => {
-            e.preventDefault();
-            const nombre = document.getElementById('nombreEvento').value;
-            const fecha = document.getElementById('fechaEvento').value;
-            const lugar = document.getElementById('lugarEvento').value;
-
-            setLoader(true);
-            try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'events'), {
-                    nombre: nombre,
-                    fecha: fecha,
-                    lugar: lugar,
-                    activo: true, // Flag para soft delete
-                    createdAt: new Date().toISOString()
-                });
-                
-                showToast("Éxito", "Evento creado correctamente", "success");
-                toggleModal('modalCrearEvento');
-                e.target.reset();
-            } catch (error) {
-                console.error(error);
-                showToast("Error", "No se pudo crear el evento", "error");
-            } finally {
-                setLoader(false);
-            }
-        };
-
-        // 3. Eliminar Evento (Soft Delete)
-        window.eliminarEvento = async (id) => {
-            if(!confirm("¿Estás seguro de eliminar este evento?")) return;
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'events', id);
-                await updateDoc(docRef, { activo: false });
-                showToast("Eliminado", "El evento ha sido desactivado", "success");
-            } catch (error) {
-                showToast("Error", "No se pudo eliminar el evento", "error");
-            }
-        };
-
-        // --- PROMOCIÓN DE JUECES ---
-
-        // 1. Cargar Coaches (Read Users where role == COACH)
-        function cargarCoaches() {
-            // Nota: En Firestore "Client SDK" no podemos filtrar por múltiples campos complejos si no hay índice.
-            // Traeremos los usuarios y filtraremos en cliente para simplicidad del demo.
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'users'));
-
-            onSnapshot(q, (snapshot) => {
-                const tbody = document.getElementById('tablaCoaches');
-                tbody.innerHTML = '';
-                
-                const coaches = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    // Filtramos solo los que son COACH puros
-                    if (data.role === 'COACH' && data.activo !== false) {
-                        coaches.push({id: doc.id, ...data});
-                    }
-                });
-
-                if (coaches.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-400 italic">No hay coaches disponibles para promoción.</td></tr>`;
-                    return;
-                }
-
-                coaches.forEach(c => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-gray-50 transition-colors";
-                    tr.innerHTML = `
-                        <td class="px-6 py-4 font-bold text-gray-700">${c.nombres} ${c.apellidos}</td>
-                        <td class="px-6 py-4 text-gray-500">${c.email}</td>
-                        <td class="px-6 py-4 text-gray-500">${c.escuela_proc || 'N/A'}</td>
-                        <td class="px-6 py-4 text-center">
-                            <button onclick="window.promoverCoach('${c.id}', '${c.nombres}')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-bold py-1.5 px-3 rounded-lg text-xs transition-all border border-yellow-300 shadow-sm flex items-center justify-center gap-2 mx-auto">
-                                <i class="fa-solid fa-user-graduate"></i> Hacer Juez
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            });
-        }
-
-        // 2. Promover (Update Role)
-        window.promoverCoach = async (uid, nombre) => {
-            if(!confirm(`¿Confirmas que deseas otorgar permisos de Juez a ${nombre}?\n\nEl usuario podrá evaluar proyectos.`)) return;
-
-            try {
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', uid);
-                // Cambiamos el rol a COACH_JUEZ (Híbrido)
-                await updateDoc(userRef, { role: 'COACH_JUEZ' });
-                showToast("Promoción Exitosa", `${nombre} ahora es Juez/Coach`, "success");
-            } catch (error) {
-                console.error(error);
-                showToast("Error", "No se pudo realizar la promoción", "error");
-            }
-        };
-
-        // --- UTILIDADES UI ---
-        
-        window.showSection = (sectionId) => {
-            // Ocultar todas
-            document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
-            // Quitar estilos activos nav
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('bg-gray-50', 'text-[#5289CB]', 'font-bold', 'border-l-4', 'border-[#5289CB]', 'shadow-sm');
-                el.classList.add('text-gray-500');
-            });
-
-            // Mostrar actual
-            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
-            
-            // Activar nav
-            const navBtn = document.getElementById(`nav-${sectionId}`);
-            if(navBtn) {
-                navBtn.classList.remove('text-gray-500');
-                navBtn.classList.add('bg-gray-50', 'text-[#5289CB]', 'font-bold', 'border-l-4', 'border-[#5289CB]', 'shadow-sm');
-            }
-        };
-
-        window.toggleModal = (modalId) => {
-            const modal = document.getElementById(modalId);
-            if(modal.classList.contains('hidden')) {
-                modal.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-            } else {
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                setTimeout(() => modal.classList.add('hidden'), 300);
-            }
-        };
-
+        // --- LOGOUT CORREGIDO ---
         window.handleLogout = () => {
-            signOut(auth).then(() => window.location.reload());
+            signOut(auth).then(() => {
+                window.location.href = '../Vista/login.html';
+            }).catch((error) => {
+                console.error("Error al salir:", error);
+                window.location.href = '../Vista/login.html';
+            });
         };
-
-        function setLoader(active) {
-            const overlay = document.getElementById('loaderOverlay');
-            if(active) overlay.classList.remove('hidden');
-            else overlay.classList.add('hidden');
-        }
-
-        function showToast(title, msg, type) {
-            const toast = document.getElementById('toast');
-            const tTitle = document.getElementById('toastTitle');
-            const tMsg = document.getElementById('toastMessage');
-            const icon = document.getElementById('toastIcon');
-
-            tTitle.innerText = title;
-            tMsg.innerText = msg;
-            
-            toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
-            icon.innerHTML = type === 'success' ? '<i class="fa-solid fa-circle-check text-green-500"></i>' : '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
-
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-        function formatearFecha(fechaStr) {
-            if(!fechaStr) return "N/A";
-            const [y, m, d] = fechaStr.split('-');
-            return `${d}/${m}/${y}`;
-        }
-
-        // Inicializar
-        initAuth();
     </script>
 </body>
 </html>

@@ -17,12 +17,9 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #2d3748; }
         .gradient-header { background: linear-gradient(to right, #52C5CB, #5852CB); }
         .btn-gradient { background: linear-gradient(to right, #5289CB, #5852CB); color: white; transition: 0.2s; }
-        .btn-gradient:hover { opacity: 0.95; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        
+        .btn-gradient:hover { opacity: 0.95; transform: translateY(-1px); }
         .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #52C5CB; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Toast */
         .toast { position: fixed; top: 1rem; right: 1rem; background: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-left: 4px solid; transform: translateX(150%); transition: transform 0.3s ease-out; z-index: 50; display: flex; align-items: center; gap: 10px; }
         .toast.show { transform: translateX(0); }
         .toast-success { border-color: #22c55e; }
@@ -31,9 +28,10 @@
 </head>
 <body class="bg-gray-50 h-screen flex flex-col">
 
-    <!-- Header -->
+    <!-- Header con botón VOLVER -->
     <header class="gradient-header text-white shadow-md p-4 flex justify-between items-center">
         <div class="flex items-center gap-3">
+            <!-- AQUÍ ESTÁ LA CONEXIÓN DE VUELTA -->
             <a href="adminPanel.html" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition text-white">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
@@ -46,8 +44,7 @@
 
     <!-- Contenido -->
     <main class="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full space-y-6">
-
-        <!-- Formulario de Creación -->
+        <!-- Formulario -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
                 <h2 class="text-xl font-bold text-gray-800 text-[#5289CB]">Crear Nuevo Evento</h2>
@@ -75,7 +72,7 @@
             </form>
         </div>
 
-        <!-- Lista de Eventos -->
+        <!-- Lista -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="p-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                 <h3 class="font-bold text-gray-700">Eventos Registrados</h3>
@@ -104,10 +101,8 @@
                 </table>
             </div>
         </div>
-
     </main>
 
-    <!-- Toast Notification -->
     <div id="toast" class="toast">
         <div id="toastIcon" class="text-xl"></div>
         <div class="text-sm font-medium" id="toastMessage"></div>
@@ -116,7 +111,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
         const app = initializeApp(firebaseConfig);
@@ -124,30 +119,21 @@
         const db = getFirestore(app);
         const appId = 'default-app-id';
 
-        // Auth
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                cargarEventos();
-            } else {
-                signInAnonymously(auth);
-            }
+            if (user) cargarEventos();
+            else signInAnonymously(auth);
         });
 
-        // 1. CARGAR EVENTOS
         function cargarEventos() {
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'events'));
-            
             onSnapshot(q, (snapshot) => {
                 const tbody = document.getElementById('tablaEventos');
                 tbody.innerHTML = '';
-                
                 const eventos = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     if(data.activo !== false) eventos.push({id: doc.id, ...data});
                 });
-
-                // Ordenar por fecha (más reciente primero)
                 eventos.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
                 document.getElementById('contador').innerText = eventos.length;
 
@@ -157,24 +143,17 @@
                 }
 
                 eventos.forEach(evt => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-gray-50 transition-colors";
-                    
-                    // Formato Fecha
                     const fechaObj = new Date(evt.fecha);
                     const fechaStr = fechaObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 transition-colors";
                     tr.innerHTML = `
                         <td class="px-6 py-4 font-bold text-gray-800">${evt.nombre}</td>
                         <td class="px-6 py-4 text-gray-600">${fechaStr}</td>
                         <td class="px-6 py-4 text-gray-600"><i class="fa-solid fa-location-dot mr-1 text-[#52C5CB]"></i> ${evt.lugar}</td>
+                        <td class="px-6 py-4 text-center"><span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">ACTIVO</span></td>
                         <td class="px-6 py-4 text-center">
-                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">ACTIVO</span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <button onclick="window.eliminarEvento('${evt.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title="Eliminar">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
+                            <button onclick="window.eliminarEvento('${evt.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition"><i class="fa-solid fa-trash-can"></i></button>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -182,61 +161,36 @@
             });
         }
 
-        // 2. CREAR EVENTO
         window.crearEvento = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnGuardar');
-            const originalText = btn.innerHTML;
-            
-            const nombre = document.getElementById('nombre').value.trim();
-            const fecha = document.getElementById('fecha').value;
-            const lugar = document.getElementById('lugar').value.trim();
-
             btn.disabled = true;
-            btn.innerHTML = '<div class="loader border-t-white"></div> Guardando...';
-
             try {
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'events'), {
-                    nombre, fecha, lugar,
-                    activo: true,
-                    createdAt: new Date().toISOString()
+                    nombre: document.getElementById('nombre').value.trim(),
+                    fecha: document.getElementById('fecha').value,
+                    lugar: document.getElementById('lugar').value.trim(),
+                    activo: true, createdAt: new Date().toISOString()
                 });
-                
                 mostrarToast("Evento creado exitosamente", "success");
                 e.target.reset();
-            } catch (error) {
-                console.error(error);
-                mostrarToast("Error al guardar el evento", "error");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
+            } catch (error) { mostrarToast("Error al guardar", "error"); }
+            finally { btn.disabled = false; }
         };
 
-        // 3. ELIMINAR EVENTO (Soft Delete)
         window.eliminarEvento = async (id) => {
-            if(!confirm("¿Está seguro de eliminar este evento?\nEsto lo ocultará de todas las listas.")) return;
-
+            if(!confirm("¿Eliminar este evento?")) return;
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', id), {
-                    activo: false
-                });
-                mostrarToast("Evento eliminado correctamente", "success");
-            } catch (error) {
-                mostrarToast("Error al eliminar", "error");
-            }
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', id), { activo: false });
+                mostrarToast("Evento eliminado", "success");
+            } catch (error) { mostrarToast("Error al eliminar", "error"); }
         };
 
         function mostrarToast(msg, type) {
             const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            const message = document.getElementById('toastMessage');
-            
-            toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
-            icon.innerHTML = type === 'success' ? '<i class="fa-solid fa-check-circle text-green-500"></i>' : '<i class="fa-solid fa-circle-xmark text-red-500"></i>';
-            message.innerText = msg;
-
-            toast.classList.add('show');
+            document.getElementById('toastMessage').innerText = msg;
+            document.getElementById('toastIcon').innerHTML = type === 'success' ? '<i class="fa-solid fa-check-circle text-green-500"></i>' : '<i class="fa-solid fa-circle-xmark text-red-500"></i>';
+            toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'} show`;
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
     </script>

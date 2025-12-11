@@ -15,11 +15,9 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #2d3748; }
-        .gradient-header { background: linear-gradient(to right, #5852CB, #5289CB); } /* Gradiente invertido para distinguir */
-        
+        .gradient-header { background: linear-gradient(to right, #5852CB, #5289CB); }
         .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #5852CB; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         .toast { position: fixed; top: 1rem; right: 1rem; background: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-left: 4px solid; transform: translateX(150%); transition: transform 0.3s ease-out; z-index: 50; display: flex; align-items: center; gap: 10px; }
         .toast.show { transform: translateX(0); }
         .toast-success { border-color: #22c55e; }
@@ -27,9 +25,10 @@
 </head>
 <body class="bg-gray-50 h-screen flex flex-col">
 
-    <!-- Header -->
+    <!-- Header con botón VOLVER -->
     <header class="gradient-header text-white shadow-md p-4 flex justify-between items-center">
         <div class="flex items-center gap-3">
+            <!-- AQUÍ ESTÁ LA CONEXIÓN DE VUELTA -->
             <a href="adminPanel.html" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition text-white">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
@@ -42,24 +41,20 @@
 
     <!-- Contenido -->
     <main class="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full space-y-6">
-
-        <!-- Info Card -->
         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-sm flex gap-4 items-start">
             <div class="text-yellow-500 text-xl mt-1"><i class="fa-solid fa-triangle-exclamation"></i></div>
             <div>
                 <h3 class="font-bold text-yellow-800 text-sm">¿Cómo funciona la promoción?</h3>
                 <p class="text-sm text-yellow-700 mt-1">
                     Esta acción convierte a un <strong>Coach</strong> en un usuario con rol híbrido (<strong>COACH_JUEZ</strong>).
-                    <br>El usuario mantendrá acceso a sus equipos pero también podrá evaluar proyectos en el panel de jueces.
+                    <br>El usuario mantendrá acceso a sus equipos pero también podrá evaluar proyectos.
                 </p>
             </div>
         </div>
 
-        <!-- Tabla de Usuarios -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="p-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                 <h3 class="font-bold text-gray-700">Coaches Disponibles para Promoción</h3>
-                
                 <div class="relative">
                     <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
                     <input type="text" id="buscador" onkeyup="filtrarTabla()" placeholder="Buscar por nombre..." class="pl-8 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#5852CB] outline-none w-64">
@@ -88,10 +83,8 @@
                 </table>
             </div>
         </div>
-
     </main>
 
-    <!-- Toast Notification -->
     <div id="toast" class="toast">
         <div class="text-green-500 text-xl"><i class="fa-solid fa-check-circle"></i></div>
         <div class="text-sm font-medium text-gray-800" id="toastMessage"></div>
@@ -100,7 +93,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, updateDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, updateDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
         const app = initializeApp(firebaseConfig);
@@ -109,29 +102,19 @@
         const appId = 'default-app-id';
 
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                cargarCoaches();
-            } else {
-                signInAnonymously(auth);
-            }
+            if (user) cargarCoaches();
+            else signInAnonymously(auth);
         });
 
-        // 1. CARGAR COACHES
         function cargarCoaches() {
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'users'));
-            
             onSnapshot(q, (snapshot) => {
                 const tbody = document.getElementById('tablaCoaches');
                 tbody.innerHTML = '';
-                
                 const coaches = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    // Solo mostramos COACHES PUROS para promover. 
-                    // Si ya es JUEZ o COACH_JUEZ no aparece aquí.
-                    if (data.role === 'COACH' && data.activo !== false) {
-                        coaches.push({id: doc.id, ...data});
-                    }
+                    if (data.role === 'COACH' && data.activo !== false) coaches.push({id: doc.id, ...data});
                 });
 
                 if (coaches.length === 0) {
@@ -141,14 +124,12 @@
 
                 coaches.forEach(c => {
                     const tr = document.createElement('tr');
-                    tr.className = "hover:bg-gray-50 transition-colors fila-coach"; // Clase para filtrado
+                    tr.className = "hover:bg-gray-50 transition-colors fila-coach";
                     tr.innerHTML = `
                         <td class="px-6 py-4 font-bold text-gray-800 nombre-coach">${c.nombres} ${c.apellidos}</td>
                         <td class="px-6 py-4 text-gray-600">${c.email}</td>
                         <td class="px-6 py-4 text-gray-600"><i class="fa-solid fa-school mr-1 text-gray-400"></i> ${c.escuela_proc || 'N/A'}</td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">COACH</span>
-                        </td>
+                        <td class="px-6 py-4 text-center"><span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">COACH</span></td>
                         <td class="px-6 py-4 text-center">
                             <button onclick="window.promover('${c.id}', '${c.nombres}')" class="bg-[#5852CB] hover:bg-[#4c46b6] text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow-md flex items-center justify-center gap-2 mx-auto w-full max-w-[140px]">
                                 <i class="fa-solid fa-star"></i> Hacer Juez
@@ -160,32 +141,19 @@
             });
         }
 
-        // 2. LÓGICA DE PROMOCIÓN (Update Role)
         window.promover = async (id, nombre) => {
-            if(!confirm(`¿Confirma que desea promover a ${nombre}?\n\nObtendrá permisos de evaluación inmediatamente.`)) return;
-
+            if(!confirm(`¿Desea promover a ${nombre}?`)) return;
             try {
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', id);
-                await updateDoc(userRef, { role: 'COACH_JUEZ' });
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id), { role: 'COACH_JUEZ' });
                 mostrarToast(`¡${nombre} ha sido promovido con éxito!`);
-            } catch (error) {
-                console.error(error);
-                alert("Error al promover usuario.");
-            }
+            } catch (error) { alert("Error al promover usuario."); }
         };
 
-        // 3. FILTRO DE BÚSQUEDA (Frontend)
         window.filtrarTabla = () => {
             const input = document.getElementById('buscador').value.toLowerCase();
-            const filas = document.querySelectorAll('.fila-coach');
-
-            filas.forEach(fila => {
+            document.querySelectorAll('.fila-coach').forEach(fila => {
                 const nombre = fila.querySelector('.nombre-coach').innerText.toLowerCase();
-                if(nombre.includes(input)) {
-                    fila.style.display = "";
-                } else {
-                    fila.style.display = "none";
-                }
+                fila.style.display = nombre.includes(input) ? "" : "none";
             });
         };
 
