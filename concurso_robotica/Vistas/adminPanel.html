@@ -3,684 +3,582 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración - Concurso de Robótica</title>
+    <title>Panel de Administración - Gestión de Torneo</title>
     
-    <!-- Tailwind CSS (Utilidades) -->
+    <!-- 1. LIBRERÍAS EXTERNAS (Tailwind + Iconos) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Hoja de Estilos Personalizada -->
-    <link rel="stylesheet" href="../Diseño/admin_styles.css">
+    <!-- 2. ESTILOS CSS (Separado del HTML visualmente) -->
+    <style>
+        /* --- CONFIGURACIÓN BASE --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #2d3748;
+        }
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+        /* --- SCROLLBAR PERSONALIZADA --- */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        /* --- GRADIENTES Y COLORES (Basados en tu JavaFX) --- */
+        .gradient-header {
+            background: linear-gradient(to right, #52C5CB, #5852CB);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(to right, #52C5CB, #5852CB);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* --- BOTONES --- */
+        .btn-gradient {
+            background: linear-gradient(to right, #5289CB, #5852CB);
+            transition: all 0.2s;
+            color: white;
+        }
+        .btn-gradient:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- PANELES Y TARJETAS --- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* --- ANIMACIONES --- */
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .animate-fade-in { 
+            animation: fadeIn 0.4s ease-out forwards; 
+        }
+
+        /* --- UTILIDADES --- */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #52C5CB;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid;
+            transform: translateX(150%);
+            transition: transform 0.3s ease-out;
+            z-index: 50;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast-success { border-color: #22c55e; }
+        .toast-error { border-color: #ef4444; }
+    </style>
 </head>
-    <!-- HEADER SUPERIOR -->
-    <header class="bg-gradient-to-r from-[#52C5CB] to-[#5852CB] text-white shadow-lg z-10 shrink-0">
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- 3. ESTRUCTURA HTML -->
+    
+    <!-- HEADER -->
+    <header class="gradient-header text-white shadow-lg z-20 shrink-0">
         <div class="container mx-auto px-6 py-3 flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                    <i class="fa-solid fa-screwdriver-wrench text-xl"></i>
+                    <i class="fa-solid fa-user-shield text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold tracking-wide">PANEL DE ADMINISTRACIÓN</h1>
-                    <p class="text-xs text-white/80">Sistema de Gestión de Concurso</p>
+                    <h1 class="text-lg font-bold tracking-wide">ADMINISTRACIÓN</h1>
+                    <p class="text-xs text-white/80 font-medium">Gestión del Concurso</p>
                 </div>
             </div>
             
             <div class="flex items-center gap-4">
                 <div class="text-right hidden md:block">
-                    <p class="text-sm font-semibold" id="adminName">Cargando...</p>
-                    <p class="text-xs text-green-200"><i class="fa-solid fa-circle text-[8px] mr-1"></i>En línea</p>
+                    <p class="text-sm font-bold" id="adminName">Administrador</p>
+                    <p class="text-[10px] bg-green-400/20 px-2 py-0.5 rounded-full inline-block text-green-100">
+                        <i class="fa-solid fa-circle text-[6px] mr-1 align-middle"></i>Sesión Activa
+                    </p>
                 </div>
-                <!-- Botón Header (Opcional, ya que agregamos el grande en el sidebar) -->
-                <button onclick="handleLogout()" class="md:hidden bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium">
+                <button onclick="handleLogout()" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors" title="Cerrar Sesión">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden relative">
         
-        <!-- SIDEBAR -->
-        <nav class="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 hidden md:flex">
+        <!-- SIDEBAR DE NAVEGACIÓN -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex z-10">
             <div class="p-6">
                 <p class="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider">Menú Principal</p>
-                <div class="space-y-2">
-                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full text-left px-4 py-3 rounded-xl bg-gray-50 text-[#5289CB] font-bold border-l-4 border-[#5289CB] shadow-sm transition-all flex items-center gap-3">
-                        <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                <nav class="space-y-2">
+                    <button onclick="showSection('dashboard')" id="nav-dashboard" class="nav-item w-full text-left px-4 py-3 rounded-xl bg-gray-50 text-[#5289CB] font-bold border-l-4 border-[#5289CB] shadow-sm flex items-center gap-3 transition-all">
+                        <i class="fa-solid fa-chart-pie w-5 text-center"></i> Dashboard
                     </button>
-                    <button onclick="switchTab('eventos')" id="nav-eventos" class="w-full text-left px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all flex items-center gap-3">
-                        <i class="fa-solid fa-calendar-check w-5"></i> Gestión de Eventos
+                    <button onclick="showSection('eventos')" id="nav-eventos" class="nav-item w-full text-left px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-700 flex items-center gap-3 transition-all">
+                        <i class="fa-solid fa-calendar-check w-5 text-center"></i> Gestionar Eventos
                     </button>
-                    <button onclick="mostrarNotificacion('Reportes disponibles en versión completa', 'info')" class="w-full text-left px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all flex items-center gap-3">
-                        <i class="fa-solid fa-file-pdf w-5"></i> Reportes
+                    <button onclick="showSection('promocion')" id="nav-promocion" class="nav-item w-full text-left px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-700 flex items-center gap-3 transition-all">
+                        <i class="fa-solid fa-user-graduate w-5 text-center"></i> Promover Juez
                     </button>
-                </div>
+                </nav>
             </div>
             
-            <!-- SECCIÓN INFERIOR EDITADA: BOTÓN DE SALIR -->
             <div class="mt-auto p-6 border-t border-gray-100">
-                <button onclick="handleLogout()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 border border-red-200 shadow-sm group">
-                    <i class="fa-solid fa-power-off group-hover:scale-110 transition-transform"></i>
-                    <span>Cerrar Sesión</span>
-                </button>
+                <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                    <h4 class="text-xs font-bold text-blue-800 mb-1">Estado del Sistema</h4>
+                    <p class="text-[10px] text-blue-600">Base de datos: <span class="font-bold">Conectada</span></p>
+                </div>
             </div>
-        </nav>
+        </aside>
 
-        <!-- AREA DE CONTENIDO -->
+        <!-- CONTENIDO PRINCIPAL -->
         <main class="flex-1 overflow-y-auto bg-[#f8f9fa] p-4 md:p-8 relative">
             
-            <!-- Toast Notification -->
-            <div id="toast" class="fixed top-20 right-5 transform translate-x-full transition-transform duration-300 z-50 bg-white border-l-4 border-green-500 shadow-xl rounded-lg p-4 flex items-center gap-3 min-w-[300px]">
-                <div class="text-green-500 text-xl"><i class="fa-solid fa-circle-check"></i></div>
+            <!-- OVERLAY DE CARGA -->
+            <div id="loaderOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+                <div class="loader"></div>
+            </div>
+
+            <!-- SECCIÓN: DASHBOARD (Resumen) -->
+            <section id="section-dashboard" class="animate-fade-in space-y-6">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Bienvenido al Sistema</h2>
+                        <p class="text-sm text-gray-500">Seleccione una acción rápida para comenzar.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Card Acceso Rápido Eventos -->
+                    <div onclick="showSection('eventos')" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-[#5289CB] text-xl group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-trophy"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">Gestionar Eventos</h3>
+                                <p class="text-xs text-gray-500">Crear o eliminar competencias</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Acceso Rápido Promoción -->
+                    <div onclick="showSection('promocion')" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-[#5852CB] text-xl group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-users-gear"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">Promover Jueces</h3>
+                                <p class="text-xs text-gray-500">Asignar roles a Coaches</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN: GESTIONAR EVENTOS -->
+            <section id="section-eventos" class="hidden animate-fade-in space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-day text-[#5289CB]"></i> Gestión de Eventos
+                        </h2>
+                        <p class="text-sm text-gray-500">Cree nuevos torneos o administre los existentes.</p>
+                    </div>
+                    <button onclick="toggleModal('modalCrearEvento')" class="btn-gradient px-6 py-2.5 rounded-lg shadow-md font-bold text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Nuevo Evento
+                    </button>
+                </div>
+
+                <!-- Lista de Eventos -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-700">Eventos Activos</h3>
+                        <span id="eventCount" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold">0</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3">Nombre del Evento</th>
+                                    <th class="px-6 py-3">Fecha</th>
+                                    <th class="px-6 py-3">Lugar</th>
+                                    <th class="px-6 py-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaEventos" class="divide-y divide-gray-200">
+                                <!-- Se llena dinámicamente -->
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-gray-400">
+                                        <div class="flex flex-col items-center gap-2">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
+                                            <span>Cargando eventos...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN: PROMOVER JUEZ -->
+            <section id="section-promocion" class="hidden animate-fade-in space-y-6">
                 <div>
-                    <h4 class="font-bold text-sm text-gray-800" id="toastTitle">Éxito</h4>
-                    <p class="text-xs text-gray-500" id="toastMessage">Operación realizada</p>
-                </div>
-            </div>
-
-            <!-- TAB: DASHBOARD -->
-            <div id="tab-dashboard" class="animate-fade-in space-y-6">
-                <div class="flex justify-between items-end mb-2">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">Resumen General</h2>
-                        <p class="text-sm text-gray-500">Vista rápida de las métricas del sistema.</p>
-                    </div>
-                    <button onclick="cargarEstadisticas()" class="text-[#5289CB] text-sm hover:underline"><i class="fa-solid fa-rotate-right mr-1"></i> Actualizar</button>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-user-shield text-[#5852CB]"></i> Promoción de Personal
+                    </h2>
+                    <p class="text-sm text-gray-500">Otorgue permisos de Juez a Coaches existentes (Rol Híbrido).</p>
                 </div>
 
-                <!-- Tarjetas Estadísticas -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                        <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-[#5852CB] text-xl">
-                            <i class="fa-solid fa-calendar-days"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Eventos Activos</p>
-                            <h3 class="text-3xl font-bold text-gray-800" id="statEventos">-</h3>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                        <div class="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-[#52C5CB] text-xl">
-                            <i class="fa-solid fa-users-gear"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Equipos Registrados</p>
-                            <h3 class="text-3xl font-bold text-gray-800" id="statEquipos">-</h3>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-xl">
-                            <i class="fa-solid fa-user-check"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Usuarios Totales</p>
-                            <h3 class="text-3xl font-bold text-gray-800" id="statUsuarios">-</h3>
-                        </div>
+                <!-- Info Box -->
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg flex items-start gap-3">
+                    <i class="fa-solid fa-triangle-exclamation text-yellow-500 mt-1"></i>
+                    <div class="text-sm text-yellow-800">
+                        <p class="font-bold">¿Qué implica la promoción?</p>
+                        <p>El usuario pasará al rol <strong>"COACH_JUEZ"</strong>. Mantendrá sus equipos actuales pero podrá acceder al panel de evaluación. <br>Esto no elimina su cuenta, solo actualiza sus permisos.</p>
                     </div>
                 </div>
 
-                <!-- Acciones Rápidas -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="font-bold text-gray-700 mb-4 text-lg">Accesos Directos</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button onclick="switchTab('eventos')" class="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition flex items-center gap-4 group text-left">
-                            <div class="bg-gradient-to-r from-[#52C5CB] to-[#5289CB] w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-plus"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-gray-700">Gestionar Evento</h4>
-                                <p class="text-xs text-gray-500">Crear nuevo o editar existentes</p>
-                            </div>
-                        </button>
-                        <button onclick="switchTab('eventos'); setTimeout(() => document.getElementById('section-promocion').scrollIntoView({behavior: 'smooth'}), 300);" class="p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition flex items-center gap-4 group text-left">
-                            <div class="bg-gradient-to-r from-[#5289CB] to-[#5852CB] w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-user-graduate"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-gray-700">Promover Juez</h4>
-                                <p class="text-xs text-gray-500">Otorgar permisos a coaches</p>
-                            </div>
-                        </button>
+                <!-- Tabla de Coaches -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 bg-gray-50/50">
+                        <h3 class="font-bold text-gray-700">Coaches Disponibles para Promoción</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3">Nombre Completo</th>
+                                    <th class="px-6 py-3">Correo Electrónico</th>
+                                    <th class="px-6 py-3">Institución</th>
+                                    <th class="px-6 py-3 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaCoaches" class="divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-gray-400">
+                                        Cargando usuarios...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </div>
-
-            <!-- TAB: GESTIÓN DE EVENTOS -->
-            <div id="tab-eventos" class="hidden space-y-8 animate-fade-in pb-10">
-                
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">Gestión de Eventos</h2>
-                        <p class="text-sm text-gray-500">Administra competencias y asignaciones.</p>
-                    </div>
-                </div>
-
-                <!-- SECCIÓN 1: CONTROL DE EVENTOS -->
-                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                        <h3 class="font-bold text-[#5289CB] flex items-center gap-2">
-                            <i class="fa-solid fa-trophy"></i> 1. Selección de Evento
-                        </h3>
-                        <button onclick="toggleSection('createEventForm')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition">
-                            <i class="fa-solid fa-plus"></i> Nuevo
-                        </button>
-                    </div>
-                    
-                    <div class="p-6">
-                        <div class="flex flex-col md:flex-row gap-4 items-end mb-6">
-                            <div class="flex-1 w-full">
-                                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Evento Activo</label>
-                                <select id="eventoSelector" onchange="cargarDetalleEvento()" class="w-full border-gray-300 border rounded-lg p-3 focus:ring-2 focus:ring-[#52C5CB] focus:border-[#52C5CB] outline-none bg-gray-50">
-                                    <option value="" disabled selected>-- Seleccione un evento --</option>
-                                </select>
-                            </div>
-                            <button onclick="eliminarEvento()" id="btnEliminarEvento" class="bg-red-100 text-red-600 hover:bg-red-200 px-4 py-3 rounded-lg font-bold transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                                <i class="fa-solid fa-trash-can mr-2"></i> Eliminar
-                            </button>
-                        </div>
-
-                        <div id="createEventForm" class="hidden bg-[#e8f4f8] rounded-xl p-5 border border-blue-100 space-y-4 relative">
-                            <button onclick="toggleSection('createEventForm')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
-                            <h4 class="font-bold text-sm text-gray-700">Crear Nuevo Evento</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input type="text" id="newEventoNombre" placeholder="Nombre (ej. Torneo Nacional)" class="border rounded-lg p-2 text-sm w-full">
-                                <input type="date" id="newEventoFecha" class="border rounded-lg p-2 text-sm w-full">
-                                <input type="text" id="newEventoLugar" placeholder="Lugar (ej. Auditorio)" class="border rounded-lg p-2 text-sm w-full">
-                            </div>
-                            <div class="text-right">
-                                <button onclick="crearEvento()" class="bg-[#27ae60] hover:bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-md transition">
-                                    Guardar Evento
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SECCIÓN 2: ASIGNACIÓN DE JUECES -->
-                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden opacity-50 pointer-events-none transition-all duration-300" id="panelAsignacion">
-                    <div class="p-5 border-b border-gray-100 bg-gray-50">
-                        <h3 class="font-bold text-[#5289CB] flex items-center gap-2">
-                            <i class="fa-solid fa-gavel"></i> 2. Asignación de Jueces
-                        </h3>
-                    </div>
-                    
-                    <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="space-y-4">
-                            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                <h4 class="font-bold text-sm text-blue-800 mb-3">Asignar Nuevo Juez</h4>
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-500 mb-1">Juez Disponible</label>
-                                        <select id="juezSelector" class="w-full border rounded-lg p-2 text-sm bg-white">
-                                            <option value="">Cargando jueces...</option>
-                                        </select>
-                                        <p class="text-[10px] text-gray-400 mt-1 italic">* Solo muestra usuarios con rol JUEZ o COACH_JUEZ</p>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-500 mb-1">Categoría a Evaluar</label>
-                                        <select id="categoriaSelector" class="w-full border rounded-lg p-2 text-sm bg-white">
-                                            <option value="PRIMARIA">PRIMARIA</option>
-                                            <option value="SECUNDARIA">SECUNDARIA</option>
-                                            <option value="PREPARATORIA">PREPARATORIA</option>
-                                            <option value="UNIVERSIDAD">UNIVERSIDAD</option>
-                                        </select>
-                                    </div>
-                                    <button onclick="asignarJuez()" class="w-full bg-gradient-to-r from-[#5289CB] to-[#5852CB] text-white py-2 rounded-lg font-bold shadow-md mt-2 hover:opacity-90">
-                                        <i class="fa-solid fa-plus-circle mr-1"></i> Asignar al Evento
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-col h-full">
-                            <h4 class="font-bold text-sm text-gray-700 mb-2 flex justify-between">
-                                <span>Jueces Asignados Actualmente</span>
-                                <span class="text-xs bg-gray-200 px-2 py-0.5 rounded-full text-gray-600" id="countJueces">0</span>
-                            </h4>
-                            <div class="flex-1 border rounded-xl overflow-hidden bg-gray-50 relative min-h-[200px]">
-                                <div class="overflow-y-auto max-h-[300px]">
-                                    <table class="w-full text-sm text-left">
-                                        <thead class="text-xs text-gray-500 uppercase bg-gray-100 sticky top-0">
-                                            <tr>
-                                                <th class="px-4 py-3">Juez</th>
-                                                <th class="px-4 py-3">Categoría</th>
-                                                <th class="px-4 py-3 text-center">Acción</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tablaAsignaciones" class="divide-y divide-gray-200 bg-white">
-                                            <tr>
-                                                <td colspan="3" class="px-4 py-8 text-center text-gray-400 italic">
-                                                    Seleccione un evento para ver asignaciones
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SECCIÓN 3: PROMOCIÓN (Usuario Híbrido) -->
-                <div id="section-promocion" class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 bg-gray-50">
-                        <h3 class="font-bold text-[#5289CB] flex items-center gap-2">
-                            <i class="fa-solid fa-user-shield"></i> 3. Promoción de Personal (Coaches)
-                        </h3>
-                    </div>
-                    
-                    <div class="p-6">
-                        <div class="flex items-start gap-4 mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                            <i class="fa-solid fa-triangle-exclamation text-yellow-500 mt-1"></i>
-                            <div class="text-sm text-yellow-800">
-                                <p class="font-bold">Información sobre el Doble Rol</p>
-                                <p class="text-xs opacity-90">Al promover a un Coach, este obtendrá el rol "COACH_JUEZ". Podrá seguir administrando sus equipos pero también tendrá permiso para evaluar proyectos en categorías donde no tenga conflicto de interés.</p>
-                            </div>
-                        </div>
-
-                        <div class="overflow-x-auto border rounded-xl">
-                            <table class="w-full text-sm text-left">
-                                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3">Nombre Coach</th>
-                                        <th class="px-6 py-3">Email</th>
-                                        <th class="px-6 py-3">Institución</th>
-                                        <th class="px-6 py-3 text-center">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaCoaches" class="divide-y divide-gray-200 bg-white">
-                                    <!-- Filas dinámicas -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="emptyCoaches" class="hidden p-8 text-center text-gray-400 italic">
-                            No hay coaches disponibles para promoción.
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+            </section>
 
         </main>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
+    <!-- MODAL: CREAR EVENTO -->
+    <div id="modalCrearEvento" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity opacity-0 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform scale-95 transition-transform">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Crear Nuevo Evento</h3>
+                <button onclick="toggleModal('modalCrearEvento')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <form onsubmit="handleCrearEvento(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">NOMBRE DEL EVENTO</label>
+                    <input type="text" id="nombreEvento" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#52C5CB] outline-none" placeholder="Ej. Torneo Nacional 2025" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">FECHA</label>
+                    <input type="date" id="fechaEvento" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#52C5CB] outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">LUGAR</label>
+                    <input type="text" id="lugarEvento" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#52C5CB] outline-none" placeholder="Ej. Auditorio Principal" required>
+                </div>
+                
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="toggleModal('modalCrearEvento')" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 font-bold hover:bg-gray-50">Cancelar</button>
+                    <button type="submit" class="flex-1 btn-gradient px-4 py-2 rounded-lg font-bold shadow-md">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="toast">
+        <div id="toastIcon" class="text-xl"></div>
+        <div>
+            <h4 class="font-bold text-sm" id="toastTitle"></h4>
+            <p class="text-xs text-gray-500" id="toastMessage"></p>
+        </div>
+    </div>
+
+    <!-- 4. LÓGICA JAVASCRIPT (Firebase) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- CONFIGURACIÓN ---
         const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = 'default-app-id';
+        const appId = 'default-app-id'; // O obtener dinámicamente
 
         let currentUser = null;
-        let currentEventId = null;
-        let eventUnsubscribe = null;
-        let judgesUnsubscribe = null;
-        let coachesUnsubscribe = null;
-        let assignUnsubscribe = null;
 
-        async function initAuth() {
+        // --- AUTENTICACIÓN ---
+        const initAuth = () => {
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     currentUser = user;
-                    document.getElementById('authOverlay').classList.add('hidden');
-                    document.getElementById('adminName').innerText = "Administrador";
-                    loadStats();
-                    loadEvents();
-                    loadJudges();
-                    loadCoaches();
+                    // En app real, verificaríamos si el usuario es ADMIN en Firestore
+                    initApp();
                 } else {
-                    document.getElementById('authOverlay').classList.remove('hidden');
-                    signInAnonymously(auth).catch((error) => {
-                        console.error("Error Auth:", error);
-                        // No mostrar alerta intrusiva en demo
-                    });
+                    signInAnonymously(auth).catch(console.error);
                 }
-            });
-        }
-        initAuth();
-
-        window.handleLogout = () => {
-            // Cierra sesión en Firebase y luego redirige al login
-            signOut(auth).then(() => {
-                window.location.href = 'login.html';
             });
         };
 
-        function loadStats() {
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'events'), (snapshot) => {
-                const active = snapshot.docs.filter(d => d.data().activo !== false).length;
-                document.getElementById('statEventos').innerText = active;
-            });
+        const initApp = () => {
+            // Cargar datos en tiempo real
+            cargarEventos();
+            cargarCoaches();
+        };
 
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snapshot) => {
-                const total = snapshot.size; 
-                document.getElementById('statUsuarios').innerText = total;
-            });
-
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'teams'), (snapshot) => {
-                document.getElementById('statEquipos').innerText = snapshot.size;
-            }, (error) => {
-                document.getElementById('statEquipos').innerText = "0";
-            });
-        }
-
-        function loadEvents() {
+        // --- GESTIÓN DE EVENTOS ---
+        
+        // 1. Cargar Eventos (Read)
+        function cargarEventos() {
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'events'));
             
-            eventUnsubscribe = onSnapshot(q, (snapshot) => {
-                const select = document.getElementById('eventoSelector');
-                const currentVal = select.value;
-                
-                select.innerHTML = '<option value="" disabled selected>-- Seleccione un evento --</option>';
-                
-                const events = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.activo !== false) {
-                        events.push({ id: doc.id, ...data });
-                    }
-                });
-
-                events.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-                events.forEach(evt => {
-                    const opt = document.createElement('option');
-                    opt.value = evt.id;
-                    opt.text = `${evt.nombre} (${evt.fecha})`;
-                    select.appendChild(opt);
-                });
-
-                if (currentVal && events.find(e => e.id === currentVal)) {
-                    select.value = currentVal;
-                } else if (currentEventId) {
-                    resetPanelAsignacion();
-                }
-            });
-        }
-
-        window.crearEvento = async () => {
-            const nombre = document.getElementById('newEventoNombre').value.trim();
-            const fecha = document.getElementById('newEventoFecha').value;
-            const lugar = document.getElementById('newEventoLugar').value.trim();
-
-            if(!nombre || !fecha || !lugar) {
-                mostrarNotificacion("Complete todos los campos", "error");
-                return;
-            }
-
-            try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'events'), {
-                    nombre: nombre,
-                    fecha: fecha,
-                    lugar: lugar,
-                    activo: true,
-                    createdAt: new Date().toISOString()
-                });
-                mostrarNotificacion("Evento creado exitosamente", "success");
-                document.getElementById('newEventoNombre').value = "";
-                document.getElementById('newEventoLugar').value = "";
-                toggleSection('createEventForm');
-            } catch (e) {
-                mostrarNotificacion("Error al crear: " + e.message, "error");
-            }
-        };
-
-        window.eliminarEvento = async () => {
-            if(!currentEventId) return;
-            // Usamos un modal propio o confirm simple por limitación de iframe, pero preferible confirm para admin
-            if(!confirm("¿Está seguro de eliminar este evento? Esta acción no se puede deshacer.")) return;
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'events', currentEventId);
-                await updateDoc(docRef, { activo: false });
-                mostrarNotificacion("Evento eliminado", "success");
-                resetPanelAsignacion();
-            } catch (e) {
-                mostrarNotificacion("Error: " + e.message, "error");
-            }
-        };
-
-        window.cargarDetalleEvento = () => {
-            const select = document.getElementById('eventoSelector');
-            currentEventId = select.value;
-            
-            if (currentEventId) {
-                document.getElementById('btnEliminarEvento').disabled = false;
-                const panel = document.getElementById('panelAsignacion');
-                panel.classList.remove('opacity-50', 'pointer-events-none');
-                cargarAsignaciones(currentEventId);
-            }
-        };
-
-        function resetPanelAsignacion() {
-            currentEventId = null;
-            document.getElementById('eventoSelector').value = "";
-            document.getElementById('btnEliminarEvento').disabled = true;
-            document.getElementById('panelAsignacion').classList.add('opacity-50', 'pointer-events-none');
-            document.getElementById('tablaAsignaciones').innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400 italic">Seleccione un evento</td></tr>';
-            document.getElementById('countJueces').innerText = "0";
-        }
-
-        function loadJudges() {
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snapshot) => {
-                const select = document.getElementById('juezSelector');
-                select.innerHTML = '<option value="">-- Seleccione Juez --</option>';
-                
-                snapshot.forEach(doc => {
-                    const u = doc.data();
-                    if (u.role === 'JUEZ' || u.role === 'COACH_JUEZ') {
-                        const opt = document.createElement('option');
-                        opt.value = doc.id;
-                        opt.text = `${u.nombres} ${u.apellidos} (${u.role === 'COACH_JUEZ' ? 'Híbrido' : 'Juez'})`;
-                        opt.setAttribute('data-name', `${u.nombres} ${u.apellidos}`);
-                        opt.setAttribute('data-school', u.escuela_proc || "");
-                        select.appendChild(opt);
-                    }
-                });
-            });
-        }
-
-        function cargarAsignaciones(eventId) {
-            if(assignUnsubscribe) assignUnsubscribe();
-
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'));
-            
-            assignUnsubscribe = onSnapshot(q, (snapshot) => {
-                const tbody = document.getElementById('tablaAsignaciones');
+            onSnapshot(q, (snapshot) => {
+                const tbody = document.getElementById('tablaEventos');
                 tbody.innerHTML = '';
                 
-                let count = 0;
-                const assignments = [];
+                const eventos = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if(data.eventId === eventId) {
-                        assignments.push({id: doc.id, ...data});
+                    if(data.activo !== false) { // Solo mostrar activos (Soft Delete)
+                        eventos.push({id: doc.id, ...data});
                     }
                 });
 
-                assignments.sort((a, b) => a.category.localeCompare(b.category));
+                // Ordenar por fecha más reciente
+                eventos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                document.getElementById('eventCount').innerText = eventos.length;
 
-                if (assignments.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-gray-400 text-xs">Sin jueces asignados</td></tr>';
+                if (eventos.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-400 italic">No hay eventos activos.</td></tr>`;
+                    return;
                 }
 
-                assignments.forEach(asg => {
-                    count++;
+                eventos.forEach(evt => {
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-50 transition-colors";
                     tr.innerHTML = `
-                        <td class="px-4 py-3 font-medium text-gray-700">${asg.judgeName}</td>
-                        <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold">${asg.category}</span></td>
-                        <td class="px-4 py-3 text-center">
-                            <button onclick="removerJuez('${asg.id}')" class="text-red-400 hover:text-red-600 transition">
-                                <i class="fa-solid fa-circle-xmark text-lg"></i>
+                        <td class="px-6 py-4 font-medium text-gray-800">${evt.nombre}</td>
+                        <td class="px-6 py-4 text-gray-500">${formatearFecha(evt.fecha)}</td>
+                        <td class="px-6 py-4 text-gray-500">${evt.lugar}</td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="window.eliminarEvento('${evt.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-all" title="Eliminar Evento">
+                                <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
-                
-                document.getElementById('countJueces').innerText = count;
             });
         }
 
-        window.asignarJuez = async () => {
-            if(!currentEventId) return;
-            
-            const juezSelect = document.getElementById('juezSelector');
-            const judgeId = juezSelect.value;
-            const category = document.getElementById('categoriaSelector').value;
-            
-            if(!judgeId) {
-                mostrarNotificacion("Seleccione un juez", "error");
-                return;
-            }
+        // 2. Crear Evento (Create)
+        window.handleCrearEvento = async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('nombreEvento').value;
+            const fecha = document.getElementById('fechaEvento').value;
+            const lugar = document.getElementById('lugarEvento').value;
 
-            const judgeName = juezSelect.options[juezSelect.selectedIndex].getAttribute('data-name');
-            const judgeSchool = juezSelect.options[juezSelect.selectedIndex].getAttribute('data-school');
-
+            setLoader(true);
             try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'), {
-                    eventId: currentEventId,
-                    judgeId: judgeId,
-                    judgeName: judgeName,
-                    category: category,
-                    assignedAt: new Date().toISOString()
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'events'), {
+                    nombre: nombre,
+                    fecha: fecha,
+                    lugar: lugar,
+                    activo: true, // Flag para soft delete
+                    createdAt: new Date().toISOString()
                 });
                 
-                mostrarNotificacion("Juez asignado correctamente", "success");
-            } catch (e) {
-                mostrarNotificacion("Error: " + e.message, "error");
+                showToast("Éxito", "Evento creado correctamente", "success");
+                toggleModal('modalCrearEvento');
+                e.target.reset();
+            } catch (error) {
+                console.error(error);
+                showToast("Error", "No se pudo crear el evento", "error");
+            } finally {
+                setLoader(false);
             }
         };
 
-        window.removerJuez = async (assignmentId) => {
-            if(!confirm("¿Quitar juez de este evento?")) return;
+        // 3. Eliminar Evento (Soft Delete)
+        window.eliminarEvento = async (id) => {
+            if(!confirm("¿Estás seguro de eliminar este evento?")) return;
+
             try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', assignmentId));
-                mostrarNotificacion("Asignación removida", "success");
-            } catch (e) {
-                mostrarNotificacion("Error: " + e.message, "error");
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'events', id);
+                await updateDoc(docRef, { activo: false });
+                showToast("Eliminado", "El evento ha sido desactivado", "success");
+            } catch (error) {
+                showToast("Error", "No se pudo eliminar el evento", "error");
             }
         };
 
-        function loadCoaches() {
+        // --- PROMOCIÓN DE JUECES ---
+
+        // 1. Cargar Coaches (Read Users where role == COACH)
+        function cargarCoaches() {
+            // Nota: En Firestore "Client SDK" no podemos filtrar por múltiples campos complejos si no hay índice.
+            // Traeremos los usuarios y filtraremos en cliente para simplicidad del demo.
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'users'));
-            
-            coachesUnsubscribe = onSnapshot(q, (snapshot) => {
+
+            onSnapshot(q, (snapshot) => {
                 const tbody = document.getElementById('tablaCoaches');
-                const emptyMsg = document.getElementById('emptyCoaches');
                 tbody.innerHTML = '';
                 
-                let hasCoaches = false;
-
+                const coaches = [];
                 snapshot.forEach(doc => {
-                    const u = doc.data();
-                    if (u.role === 'COACH') {
-                        hasCoaches = true;
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td class="px-6 py-4 font-bold text-gray-700">${u.nombres} ${u.apellidos}</td>
-                            <td class="px-6 py-4 text-gray-500">${u.email}</td>
-                            <td class="px-6 py-4 text-gray-500">${u.escuela_proc || 'N/A'}</td>
-                            <td class="px-6 py-4 text-center">
-                                <button onclick="promoverCoach('${doc.id}', '${u.nombres}')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-bold py-1 px-3 rounded-lg text-xs transition border border-yellow-300">
-                                    <i class="fa-solid fa-star mr-1"></i> Hacer Juez
-                                </button>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
+                    const data = doc.data();
+                    // Filtramos solo los que son COACH puros
+                    if (data.role === 'COACH' && data.activo !== false) {
+                        coaches.push({id: doc.id, ...data});
                     }
                 });
 
-                if (hasCoaches) {
-                    emptyMsg.classList.add('hidden');
-                    tbody.classList.remove('hidden');
-                } else {
-                    emptyMsg.classList.remove('hidden');
-                    tbody.classList.add('hidden');
+                if (coaches.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-400 italic">No hay coaches disponibles para promoción.</td></tr>`;
+                    return;
                 }
+
+                coaches.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 font-bold text-gray-700">${c.nombres} ${c.apellidos}</td>
+                        <td class="px-6 py-4 text-gray-500">${c.email}</td>
+                        <td class="px-6 py-4 text-gray-500">${c.escuela_proc || 'N/A'}</td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="window.promoverCoach('${c.id}', '${c.nombres}')" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-bold py-1.5 px-3 rounded-lg text-xs transition-all border border-yellow-300 shadow-sm flex items-center justify-center gap-2 mx-auto">
+                                <i class="fa-solid fa-user-graduate"></i> Hacer Juez
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             });
         }
 
+        // 2. Promover (Update Role)
         window.promoverCoach = async (uid, nombre) => {
-            if(!confirm(`¿Desea promover a ${nombre} al rol de COACH_JUEZ?`)) return;
-            
+            if(!confirm(`¿Confirmas que deseas otorgar permisos de Juez a ${nombre}?\n\nEl usuario podrá evaluar proyectos.`)) return;
+
             try {
                 const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', uid);
+                // Cambiamos el rol a COACH_JUEZ (Híbrido)
                 await updateDoc(userRef, { role: 'COACH_JUEZ' });
-                mostrarNotificacion("Usuario promovido exitosamente", "success");
-            } catch(e) {
-                mostrarNotificacion("Error: " + e.message, "error");
+                showToast("Promoción Exitosa", `${nombre} ahora es Juez/Coach`, "success");
+            } catch (error) {
+                console.error(error);
+                showToast("Error", "No se pudo realizar la promoción", "error");
             }
         };
 
-        window.switchTab = (tabId) => {
-            document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('[id^="nav-"]').forEach(el => {
+        // --- UTILIDADES UI ---
+        
+        window.showSection = (sectionId) => {
+            // Ocultar todas
+            document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+            // Quitar estilos activos nav
+            document.querySelectorAll('.nav-item').forEach(el => {
                 el.classList.remove('bg-gray-50', 'text-[#5289CB]', 'font-bold', 'border-l-4', 'border-[#5289CB]', 'shadow-sm');
                 el.classList.add('text-gray-500');
             });
 
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            // Mostrar actual
+            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
             
-            const activeNav = document.getElementById(`nav-${tabId}`);
-            activeNav.classList.remove('text-gray-500');
-            activeNav.classList.add('bg-gray-50', 'text-[#5289CB]', 'font-bold', 'border-l-4', 'border-[#5289CB]', 'shadow-sm');
-        };
-
-        window.toggleSection = (id) => {
-            const el = document.getElementById(id);
-            if (el.classList.contains('hidden')) {
-                el.classList.remove('hidden');
-            } else {
-                el.classList.add('hidden');
+            // Activar nav
+            const navBtn = document.getElementById(`nav-${sectionId}`);
+            if(navBtn) {
+                navBtn.classList.remove('text-gray-500');
+                navBtn.classList.add('bg-gray-50', 'text-[#5289CB]', 'font-bold', 'border-l-4', 'border-[#5289CB]', 'shadow-sm');
             }
         };
 
-        window.mostrarNotificacion = (msg, type) => {
-            const toast = document.getElementById('toast');
-            const title = document.getElementById('toastTitle');
-            const message = document.getElementById('toastMessage');
-            
-            title.innerText = type === 'success' ? 'Éxito' : (type === 'error' ? 'Error' : 'Información');
-            message.innerText = msg;
-            
-            toast.className = `fixed top-20 right-5 transform transition-transform duration-300 z-50 bg-white border-l-4 shadow-xl rounded-lg p-4 flex items-center gap-3 min-w-[300px] ${
-                type === 'success' ? 'border-green-500' : (type === 'error' ? 'border-red-500' : 'border-blue-500')
-            }`;
-            
-            toast.querySelector('div').className = `text-xl ${
-                type === 'success' ? 'text-green-500' : (type === 'error' ? 'text-red-500' : 'text-blue-500')
-            }`;
-            toast.querySelector('i').className = type === 'success' ? 'fa-solid fa-circle-check' : (type === 'error' ? 'fa-solid fa-circle-xmark' : 'fa-solid fa-circle-info');
-
-            toast.classList.remove('translate-x-full');
-            
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-            }, 3000);
+        window.toggleModal = (modalId) => {
+            const modal = document.getElementById(modalId);
+            if(modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            } else {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
         };
 
-        switchTab('dashboard');
+        window.handleLogout = () => {
+            signOut(auth).then(() => window.location.reload());
+        };
+
+        function setLoader(active) {
+            const overlay = document.getElementById('loaderOverlay');
+            if(active) overlay.classList.remove('hidden');
+            else overlay.classList.add('hidden');
+        }
+
+        function showToast(title, msg, type) {
+            const toast = document.getElementById('toast');
+            const tTitle = document.getElementById('toastTitle');
+            const tMsg = document.getElementById('toastMessage');
+            const icon = document.getElementById('toastIcon');
+
+            tTitle.innerText = title;
+            tMsg.innerText = msg;
+            
+            toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
+            icon.innerHTML = type === 'success' ? '<i class="fa-solid fa-circle-check text-green-500"></i>' : '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function formatearFecha(fechaStr) {
+            if(!fechaStr) return "N/A";
+            const [y, m, d] = fechaStr.split('-');
+            return `${d}/${m}/${y}`;
+        }
+
+        // Inicializar
+        initAuth();
     </script>
 </body>
 </html>

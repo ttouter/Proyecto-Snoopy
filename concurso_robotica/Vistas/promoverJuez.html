@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promover Juez - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #2d3748; }
+        .gradient-header { background: linear-gradient(to right, #5852CB, #5289CB); } /* Gradiente invertido para distinguir */
+        
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #5852CB; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .toast { position: fixed; top: 1rem; right: 1rem; background: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-left: 4px solid; transform: translateX(150%); transition: transform 0.3s ease-out; z-index: 50; display: flex; align-items: center; gap: 10px; }
+        .toast.show { transform: translateX(0); }
+        .toast-success { border-color: #22c55e; }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="gradient-header text-white shadow-md p-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <a href="adminPanel.html" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition text-white">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <h1 class="text-lg font-bold tracking-wide"><i class="fa-solid fa-user-graduate mr-2"></i>ASIGNACIÓN DE ROLES</h1>
+        </div>
+        <div class="text-sm font-medium bg-white/20 px-3 py-1 rounded-full">
+            <i class="fa-solid fa-user-shield mr-1"></i> Admin
+        </div>
+    </header>
+
+    <!-- Contenido -->
+    <main class="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full space-y-6">
+
+        <!-- Info Card -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-sm flex gap-4 items-start">
+            <div class="text-yellow-500 text-xl mt-1"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div>
+                <h3 class="font-bold text-yellow-800 text-sm">¿Cómo funciona la promoción?</h3>
+                <p class="text-sm text-yellow-700 mt-1">
+                    Esta acción convierte a un <strong>Coach</strong> en un usuario con rol híbrido (<strong>COACH_JUEZ</strong>).
+                    <br>El usuario mantendrá acceso a sus equipos pero también podrá evaluar proyectos en el panel de jueces.
+                </p>
+            </div>
+        </div>
+
+        <!-- Tabla de Usuarios -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-5 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="font-bold text-gray-700">Coaches Disponibles para Promoción</h3>
+                
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                    <input type="text" id="buscador" onkeyup="filtrarTabla()" placeholder="Buscar por nombre..." class="pl-8 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#5852CB] outline-none w-64">
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-500 uppercase bg-gray-100">
+                        <tr>
+                            <th class="px-6 py-3">Nombre Completo</th>
+                            <th class="px-6 py-3">Correo Electrónico</th>
+                            <th class="px-6 py-3">Institución</th>
+                            <th class="px-6 py-3 text-center">Rol Actual</th>
+                            <th class="px-6 py-3 text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCoaches" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-400 italic">
+                                <div class="flex justify-center mb-3"><div class="loader"></div></div>
+                                Buscando coaches...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="text-green-500 text-xl"><i class="fa-solid fa-check-circle"></i></div>
+        <div class="text-sm font-medium text-gray-800" id="toastMessage"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, updateDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'default-app-id';
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                cargarCoaches();
+            } else {
+                signInAnonymously(auth);
+            }
+        });
+
+        // 1. CARGAR COACHES
+        function cargarCoaches() {
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'users'));
+            
+            onSnapshot(q, (snapshot) => {
+                const tbody = document.getElementById('tablaCoaches');
+                tbody.innerHTML = '';
+                
+                const coaches = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Solo mostramos COACHES PUROS para promover. 
+                    // Si ya es JUEZ o COACH_JUEZ no aparece aquí.
+                    if (data.role === 'COACH' && data.activo !== false) {
+                        coaches.push({id: doc.id, ...data});
+                    }
+                });
+
+                if (coaches.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400">No hay coaches disponibles para promover.</td></tr>';
+                    return;
+                }
+
+                coaches.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 transition-colors fila-coach"; // Clase para filtrado
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 font-bold text-gray-800 nombre-coach">${c.nombres} ${c.apellidos}</td>
+                        <td class="px-6 py-4 text-gray-600">${c.email}</td>
+                        <td class="px-6 py-4 text-gray-600"><i class="fa-solid fa-school mr-1 text-gray-400"></i> ${c.escuela_proc || 'N/A'}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">COACH</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="window.promover('${c.id}', '${c.nombres}')" class="bg-[#5852CB] hover:bg-[#4c46b6] text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow-md flex items-center justify-center gap-2 mx-auto w-full max-w-[140px]">
+                                <i class="fa-solid fa-star"></i> Hacer Juez
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        // 2. LÓGICA DE PROMOCIÓN (Update Role)
+        window.promover = async (id, nombre) => {
+            if(!confirm(`¿Confirma que desea promover a ${nombre}?\n\nObtendrá permisos de evaluación inmediatamente.`)) return;
+
+            try {
+                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', id);
+                await updateDoc(userRef, { role: 'COACH_JUEZ' });
+                mostrarToast(`¡${nombre} ha sido promovido con éxito!`);
+            } catch (error) {
+                console.error(error);
+                alert("Error al promover usuario.");
+            }
+        };
+
+        // 3. FILTRO DE BÚSQUEDA (Frontend)
+        window.filtrarTabla = () => {
+            const input = document.getElementById('buscador').value.toLowerCase();
+            const filas = document.querySelectorAll('.fila-coach');
+
+            filas.forEach(fila => {
+                const nombre = fila.querySelector('.nombre-coach').innerText.toLowerCase();
+                if(nombre.includes(input)) {
+                    fila.style.display = "";
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+        };
+
+        function mostrarToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.add('show', 'toast-success');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>
