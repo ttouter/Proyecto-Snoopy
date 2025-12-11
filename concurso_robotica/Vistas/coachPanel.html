@@ -24,20 +24,6 @@
 </head>
 <body class="h-screen flex flex-col overflow-hidden bg-gray-50">
 
-    <!-- Auth Overlay -->
-    <div id="authOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-60 backdrop-blur-sm">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full animate-slide-up">
-            <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-robot text-3xl text-[#52C5CB]"></i>
-            </div>
-            <h2 class="text-2xl font-bold mb-2 text-gray-800">Acceso Coach</h2>
-            <p class="text-gray-500 mb-6 text-sm">Autenticando credenciales...</p>
-            <div class="flex justify-center">
-                <div class="loader"></div>
-            </div>
-        </div>
-    </div>
-
     <!-- HEADER -->
     <header class="gradient-bg text-white shadow-lg z-10 shrink-0">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -56,6 +42,7 @@
                     <p class="text-sm font-bold" id="coachName">Cargando...</p>
                     <p class="text-[10px] text-blue-100 bg-white/20 px-2 py-0.5 rounded-full inline-block">Coach Verificado</p>
                 </div>
+                <!-- BOTÓN LOGOUT CORREGIDO -->
                 <button onclick="handleLogout()" class="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors" title="Cerrar Sesión">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
@@ -227,7 +214,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Configuración Firebase (Recibida del entorno)
         const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}');
@@ -248,22 +235,23 @@
                     document.getElementById('authOverlay').classList.add('hidden');
                     
                     // Simular obtención de datos del usuario
-                    // En una app real, leeríamos el documento del usuario en Firestore
                     document.getElementById('coachName').innerText = "Coach Usuario"; 
                     
                     cargarEventos();
                     cargarMisEquipos();
                 } else {
                     document.getElementById('authOverlay').classList.remove('hidden');
-                    // Fallback para demo
                     signInAnonymously(auth).catch(console.error);
                 }
             });
         };
         initAuth();
 
+        // --- LOGOUT CORREGIDO ---
         window.handleLogout = () => {
-            signOut(auth).then(() => window.location.reload());
+            signOut(auth).then(() => {
+                window.location.href = 'login.html';
+            });
         };
 
         // --- 1. CARGAR EVENTOS (Para el Select) ---
@@ -316,7 +304,6 @@
             // Crear documento de equipo
             try {
                 const btn = e.target.querySelector('button[type="submit"]');
-                const originalText = btn.innerHTML;
                 btn.disabled = true;
                 btn.innerHTML = '<div class="loader mx-auto"></div>';
 
@@ -350,7 +337,7 @@
         function cargarMisEquipos() {
             if(!currentCoach) return;
 
-            // Query simple sin orderBy complejo para evitar errores de índice en Firestore modo estricto
+            // Query simple sin orderBy complejo
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'teams'));
 
             onSnapshot(q, (snapshot) => {
@@ -412,15 +399,12 @@
                     `;
                     container.appendChild(card);
                     
-                    // Cargar conteo individual (sin listener en tiempo real para ahorrar recursos, solo snapshot one-time o listener ligero)
-                    // Para simplificar en esta vista, lo haremos cuando se seleccione, pero aquí ponemos un placeholder o hacemos un query separado
                     cargarConteoIntegrantes(team.id);
                 });
             });
         }
 
         function cargarConteoIntegrantes(teamId) {
-            // Un listener ligero solo para el conteo en la tarjeta
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'members'));
             onSnapshot(q, (snap) => {
                 const count = snap.docs.filter(d => d.data().teamId === teamId).length;
@@ -435,9 +419,6 @@
             
             // UI Updates
             document.querySelectorAll('.team-card').forEach(c => c.classList.remove('selected'));
-            // Re-renderizado rápido para aplicar clase selected sin recargar todo (idealmente se hace por DOM manipulation directa)
-            // Aquí simplificamos dejando que el onSnapshot principal actualice el estilo si cambia algo, pero para feedback inmediato:
-            // (Omitido para no complicar, el usuario verá el cambio visual al instante si manipulamos clases)
             
             // Activar sección
             const section = document.getElementById('section-integrantes');

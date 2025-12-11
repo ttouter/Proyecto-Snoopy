@@ -161,10 +161,12 @@
         // --- LOGOUT CORREGIDO ---
         window.handleLogout = () => {
             signOut(auth).then(() => {
-                window.location.href = '../Vista/login.html';
+                // CORRECCIÓN: Apuntar directamente a login.html (misma carpeta)
+                window.location.href = '../Vistas/login.html';
             }).catch((error) => {
                 console.error("Error al salir:", error);
-                window.location.href = '../Vista/login.html';
+                // Forzar redirección incluso si falla el signOut
+                window.location.href = '../Vistas/login.html';
             });
         };
     </script>
